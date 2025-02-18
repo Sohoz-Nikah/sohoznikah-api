@@ -1,18 +1,21 @@
 import createHttpError from "http-errors";
-import { CreateUserBody, UserResponse } from "../interfaces/user.interfaces";
+import { CreateUserRequest, UserResponse } from "../interfaces/user.interfaces";
 import bcrypt from "bcryptjs";
 import { decodeToken } from "../utils/jwt";
 import { CustomJwtPayload } from "../interfaces/jwt.interfaces";
-import prisma from "../config/prisma";
+import { db } from "../db";
+import { users } from "../../drizzle/schema";
+import { eq } from "drizzle-orm";
 
-export const createUser = async (body: CreateUserBody): Promise<void> => {
-  const { email, password } = body;
+export const createUser = async (req: CreateUserRequest): Promise<void> => {
+  const { email, password } = req;
 
-  if (!email || !password) {
-    throw createHttpError(400, "Parameters missing");
-  }
-
-  const existingUser = await prisma.user.findUnique({ where: { email } });
+  const existingUser = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email!))
+    .limit(1)
+    .then((x) => x[0]);
 
   if (existingUser) {
     throw createHttpError(
@@ -21,22 +24,24 @@ export const createUser = async (body: CreateUserBody): Promise<void> => {
     );
   }
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+  const hashedPassword = await bcrypt.hash(password!, 10);
 
-  await prisma.user.create({
-    data: { email, passwordHash: hashedPassword },
-  });
+  // const result = await db.insert(users).values({ name: email!, email: email!, passwordHash: hashedPassword }).returning();
+  await db
+    .insert(users)
+    .values({ name: email!, email: email!, passwordHash: hashedPassword });
 };
 
 export const findUserByEmailAndPassword = async (
   email: string,
   password: string
 ): Promise<UserResponse> => {
-  if (!email || !password) {
-    throw createHttpError(400, "Parameters missing");
-  }
-
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1)
+    .then((x) => x[0]);
 
   if (!user) {
     throw createHttpError(401, "Invalid credentials");
@@ -51,6 +56,8 @@ export const findUserByEmailAndPassword = async (
   return {
     userId: user.id,
 
+    name: user.name,
+
     email: user.email,
   };
 };
@@ -59,9 +66,12 @@ export const getAuthenticatedUser = async (
   token: string
 ): Promise<UserResponse> => {
   const decodedToken = decodeToken(token) as CustomJwtPayload;
-  const user = await prisma.user.findUnique({
-    where: { id: decodedToken.user.userId },
-  });
+  const user = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, decodedToken.user.userId))
+    .limit(1)
+    .then((x) => x[0]);
 
   if (!user) {
     throw createHttpError(404, "User not found");
@@ -69,6 +79,8 @@ export const getAuthenticatedUser = async (
 
   return {
     userId: user.id,
+
+    name: user.name,
     email: user.email,
   };
 };

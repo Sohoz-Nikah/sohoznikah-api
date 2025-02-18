@@ -1,15 +1,22 @@
 import { RequestHandler } from "express";
-import { CreateUserBody, UserResponse } from "../interfaces/user.interfaces";
+import { CreateUserRequest, UserResponse } from "../interfaces/user.interfaces";
 import * as userService from "../services/user.service";
+import { SafeParseReturnType } from "zod";
+import { createUserRequest } from "../utils/validations";
 
 export const createUser: RequestHandler<
   unknown,
   unknown,
-  CreateUserBody,
+  CreateUserRequest,
   unknown
 > = async (req, res, next) => {
+  const parsed: SafeParseReturnType<CreateUserRequest, CreateUserRequest> =
+    await createUserRequest.safeParseAsync(req.body);
+  if (!parsed.success) {
+    next(parsed.error);
+  }
   try {
-    await userService.createUser(req.body);
+    await userService.createUser(parsed.data!);
     res.sendStatus(201);
   } catch (error) {
     next(error);

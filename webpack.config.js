@@ -4,7 +4,7 @@ import nodeExternals from "webpack-node-externals";
 import CopyPlugin from "copy-webpack-plugin";
 
 export default {
-  mode: "production", // change to 'production' as needed
+  mode: "production",
   entry: "./src/server.ts",
   externals: [nodeExternals()],
   module: {
@@ -19,7 +19,6 @@ export default {
   plugins: [
     new CopyPlugin({
       patterns: [
-        // Copy individual key files to the same relative path in the output folder
         {
           from: "src/config/keys/private.key",
           to: "../config/keys/private.key",

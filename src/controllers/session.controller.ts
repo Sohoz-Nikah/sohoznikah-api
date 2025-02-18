@@ -1,18 +1,28 @@
 import { RequestHandler } from "express";
 import * as sessionService from "../services/session.service";
 import {
-  CreateSessionBody,
+  CreateSessionRequest,
   SessionResponse,
 } from "../interfaces/session.interfaces";
+import { createSessionRequest } from "../utils/validations";
+import { SafeParseReturnType } from "zod";
 
 export const createSession: RequestHandler<
   unknown,
   SessionResponse,
-  CreateSessionBody,
+  CreateSessionRequest,
   unknown
 > = async (req, res, next) => {
+  const parsed: SafeParseReturnType<
+    CreateSessionRequest,
+    CreateSessionRequest
+  > = await createSessionRequest.safeParseAsync(req.body);
+  if (!parsed.success) {
+    next(parsed.error);
+  }
+
   try {
-    const token = await sessionService.createToken(req.body);
+    const token = await sessionService.createToken(parsed.data!);
     res.status(201).json({ isSuccess: true, token: token });
   } catch (error) {
     next(error);
