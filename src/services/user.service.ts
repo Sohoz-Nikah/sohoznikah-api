@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { decodeToken } from "../utils/jwt";
 import { CustomJwtPayload } from "../interfaces/jwt.interfaces";
 import { db } from "../db";
-import { users } from "../../drizzle/schema";
+import { users } from "../../drizzle/schemas/users.schema";
 import { eq } from "drizzle-orm";
 
 export const createUser = async (req: CreateUserRequest): Promise<void> => {
