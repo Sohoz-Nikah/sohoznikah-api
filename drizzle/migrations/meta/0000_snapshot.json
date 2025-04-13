@@ -1,9 +1,1487 @@
 {
-  "id": "42a4c300-5ba3-4ad9-a5d6-20aaa2731177",
+  "id": "1c2bb25a-8b77-4182-aa55-00c1bcec1b6e",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "public.biodataAddressInfos": {
+      "name": "biodataAddressInfos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(36)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "biodataId": {
+          "name": "biodataId",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "location": {
+          "name": "location",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "state": {
+          "name": "state",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "city": {
+          "name": "city",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "detail": {
+          "name": "detail",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "country": {
+          "name": "country",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cityzenshipStatus": {
+          "name": "cityzenshipStatus",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdBy": {
+          "name": "createdBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updatedBy": {
+          "name": "updatedBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "biodataAddressInfos_biodataId_biodatas_id_fk": {
+          "name": "biodataAddressInfos_biodataId_biodatas_id_fk",
+          "tableFrom": "biodataAddressInfos",
+          "tableTo": "biodatas",
+          "columnsFrom": [
+            "biodataId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.biodataEducationInfos": {
+      "name": "biodataEducationInfos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(36)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "biodataId": {
+          "name": "biodataId",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "highestDegree": {
+          "name": "highestDegree",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "religiousEducation": {
+          "name": "religiousEducation",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "detail": {
+          "name": "detail",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdBy": {
+          "name": "createdBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updatedBy": {
+          "name": "updatedBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "biodataEducationInfos_biodataId_biodatas_id_fk": {
+          "name": "biodataEducationInfos_biodataId_biodatas_id_fk",
+          "tableFrom": "biodataEducationInfos",
+          "tableTo": "biodatas",
+          "columnsFrom": [
+            "biodataId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.biodataEducationInfosDegrees": {
+      "name": "biodataEducationInfosDegrees",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(36)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "biodataId": {
+          "name": "biodataId",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "passYear": {
+          "name": "passYear",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "group": {
+          "name": "group",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "institute": {
+          "name": "institute",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdBy": {
+          "name": "createdBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updatedBy": {
+          "name": "updatedBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "biodataEducationInfosDegrees_biodataId_biodatas_id_fk": {
+          "name": "biodataEducationInfosDegrees_biodataId_biodatas_id_fk",
+          "tableFrom": "biodataEducationInfosDegrees",
+          "tableTo": "biodatas",
+          "columnsFrom": [
+            "biodataId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.biodataFamilyInfos": {
+      "name": "biodataFamilyInfos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(36)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "biodataId": {
+          "name": "biodataId",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "parentsAlive": {
+          "name": "parentsAlive",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fatherOccupation": {
+          "name": "fatherOccupation",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "motherOccupation": {
+          "name": "motherOccupation",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fatherSideDetail": {
+          "name": "fatherSideDetail",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "motherSideDetail": {
+          "name": "motherSideDetail",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "familyType": {
+          "name": "familyType",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "familyBackground": {
+          "name": "familyBackground",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "livingCondition": {
+          "name": "livingCondition",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "wealthDescription": {
+          "name": "wealthDescription",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdBy": {
+          "name": "createdBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updatedBy": {
+          "name": "updatedBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "biodataFamilyInfos_biodataId_biodatas_id_fk": {
+          "name": "biodataFamilyInfos_biodataId_biodatas_id_fk",
+          "tableFrom": "biodataFamilyInfos",
+          "tableTo": "biodatas",
+          "columnsFrom": [
+            "biodataId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.biodataFamilyInfoSiblings": {
+      "name": "biodataFamilyInfoSiblings",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(36)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "biodataId": {
+          "name": "biodataId",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "occupation": {
+          "name": "occupation",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "maritalStatus": {
+          "name": "maritalStatus",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "children": {
+          "name": "children",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdBy": {
+          "name": "createdBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updatedBy": {
+          "name": "updatedBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "biodataFamilyInfoSiblings_biodataId_biodatas_id_fk": {
+          "name": "biodataFamilyInfoSiblings_biodataId_biodatas_id_fk",
+          "tableFrom": "biodataFamilyInfoSiblings",
+          "tableTo": "biodatas",
+          "columnsFrom": [
+            "biodataId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.biodataGeneralInfos": {
+      "name": "biodataGeneralInfos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(36)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "biodataId": {
+          "name": "biodataId",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dateOfBirth": {
+          "name": "dateOfBirth",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "maritalStatus": {
+          "name": "maritalStatus",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "skinTone": {
+          "name": "skinTone",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "height": {
+          "name": "height",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "weight": {
+          "name": "weight",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bloodGroup": {
+          "name": "bloodGroup",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nationality": {
+          "name": "nationality",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdBy": {
+          "name": "createdBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updatedBy": {
+          "name": "updatedBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "biodataGeneralInfos_biodataId_biodatas_id_fk": {
+          "name": "biodataGeneralInfos_biodataId_biodatas_id_fk",
+          "tableFrom": "biodataGeneralInfos",
+          "tableTo": "biodatas",
+          "columnsFrom": [
+            "biodataId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.biodataMarriageInfos": {
+      "name": "biodataMarriageInfos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(36)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "biodataId": {
+          "name": "biodataId",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "guardianApproval": {
+          "name": "guardianApproval",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "continueStudy": {
+          "name": "continueStudy",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "careerPlan": {
+          "name": "careerPlan",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "residence": {
+          "name": "residence",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "arrangeHijab": {
+          "name": "arrangeHijab",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dowryExpectation": {
+          "name": "dowryExpectation",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "allowShowingPhotoOnline": {
+          "name": "allowShowingPhotoOnline",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "additionalMarriageInfo": {
+          "name": "additionalMarriageInfo",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdBy": {
+          "name": "createdBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updatedBy": {
+          "name": "updatedBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "biodataMarriageInfos_biodataId_biodatas_id_fk": {
+          "name": "biodataMarriageInfos_biodataId_biodatas_id_fk",
+          "tableFrom": "biodataMarriageInfos",
+          "tableTo": "biodatas",
+          "columnsFrom": [
+            "biodataId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.biodataOccupationInfos": {
+      "name": "biodataOccupationInfos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(36)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "biodataId": {
+          "name": "biodataId",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "occupations": {
+          "name": "occupations",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "detail": {
+          "name": "detail",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "monthlyIncome": {
+          "name": "monthlyIncome",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdBy": {
+          "name": "createdBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updatedBy": {
+          "name": "updatedBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "biodataOccupationInfos_biodataId_biodatas_id_fk": {
+          "name": "biodataOccupationInfos_biodataId_biodatas_id_fk",
+          "tableFrom": "biodataOccupationInfos",
+          "tableTo": "biodatas",
+          "columnsFrom": [
+            "biodataId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.biodataPersonalInfos": {
+      "name": "biodataPersonalInfos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(36)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "biodataId": {
+          "name": "biodataId",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "beardStatus": {
+          "name": "beardStatus",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "preferredOutfit": {
+          "name": "preferredOutfit",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "entertainmentPreferences": {
+          "name": "entertainmentPreferences",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "healthConditions": {
+          "name": "healthConditions",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "personalTraits": {
+          "name": "personalTraits",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "genderEqualityView": {
+          "name": "genderEqualityView",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lgbtqOpinion": {
+          "name": "lgbtqOpinion",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "specialConditions": {
+          "name": "specialConditions",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdBy": {
+          "name": "createdBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updatedBy": {
+          "name": "updatedBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "biodataPersonalInfos_biodataId_biodatas_id_fk": {
+          "name": "biodataPersonalInfos_biodataId_biodatas_id_fk",
+          "tableFrom": "biodataPersonalInfos",
+          "tableTo": "biodatas",
+          "columnsFrom": [
+            "biodataId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.biodataPrimaryInfoGuardianContacts": {
+      "name": "biodataPrimaryInfoGuardianContacts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(36)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "biodataId": {
+          "name": "biodataId",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "relation": {
+          "name": "relation",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fullName": {
+          "name": "fullName",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phoneNumber": {
+          "name": "phoneNumber",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdBy": {
+          "name": "createdBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updatedBy": {
+          "name": "updatedBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "biodataPrimaryInfoGuardianContacts_biodataId_biodatas_id_fk": {
+          "name": "biodataPrimaryInfoGuardianContacts_biodataId_biodatas_id_fk",
+          "tableFrom": "biodataPrimaryInfoGuardianContacts",
+          "tableTo": "biodatas",
+          "columnsFrom": [
+            "biodataId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.biodataPrimaryInfos": {
+      "name": "biodataPrimaryInfos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(36)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "biodataId": {
+          "name": "biodataId",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "biodataType": {
+          "name": "biodataType",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "biodataFor": {
+          "name": "biodataFor",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fullName": {
+          "name": "fullName",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fatherName": {
+          "name": "fatherName",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "motherName": {
+          "name": "motherName",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phoneNumber": {
+          "name": "phoneNumber",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdBy": {
+          "name": "createdBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updatedBy": {
+          "name": "updatedBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "biodataPrimaryInfos_biodataId_biodatas_id_fk": {
+          "name": "biodataPrimaryInfos_biodataId_biodatas_id_fk",
+          "tableFrom": "biodataPrimaryInfos",
+          "tableTo": "biodatas",
+          "columnsFrom": [
+            "biodataId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.biodataReligiousInfos": {
+      "name": "biodataReligiousInfos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(36)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "biodataId": {
+          "name": "biodataId",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ideology": {
+          "name": "ideology",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "madhab": {
+          "name": "madhab",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "praysFiveTimes": {
+          "name": "praysFiveTimes",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "hasQazaPrayers": {
+          "name": "hasQazaPrayers",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "canReciteQuranProperly": {
+          "name": "canReciteQuranProperly",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "avoidsHaramIncome": {
+          "name": "avoidsHaramIncome",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "modestDressing": {
+          "name": "modestDressing",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "followsMahramRules": {
+          "name": "followsMahramRules",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "beliefAboutPirMurshidAndMazar": {
+          "name": "beliefAboutPirMurshidAndMazar",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "practicingSince": {
+          "name": "practicingSince",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdBy": {
+          "name": "createdBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updatedBy": {
+          "name": "updatedBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "biodataReligiousInfos_biodataId_biodatas_id_fk": {
+          "name": "biodataReligiousInfos_biodataId_biodatas_id_fk",
+          "tableFrom": "biodataReligiousInfos",
+          "tableTo": "biodatas",
+          "columnsFrom": [
+            "biodataId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.biodatas": {
+      "name": "biodatas",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(36)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "preApprovalAcceptTerms": {
+          "name": "preApprovalAcceptTerms",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "preApprovalOathTruthfulInfo": {
+          "name": "preApprovalOathTruthfulInfo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "preApprovalOathLegalResponsibility": {
+          "name": "preApprovalOathLegalResponsibility",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "postApprovalOathTruthfulInfo": {
+          "name": "postApprovalOathTruthfulInfo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "postApprovalOathNoMisuse": {
+          "name": "postApprovalOathNoMisuse",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "postApprovalOathLegalResponsibility": {
+          "name": "postApprovalOathLegalResponsibility",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "profilePic": {
+          "name": "profilePic",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdBy": {
+          "name": "createdBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updatedBy": {
+          "name": "updatedBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "biodatas_userId_users_id_fk": {
+          "name": "biodatas_userId_users_id_fk",
+          "tableFrom": "biodatas",
+          "tableTo": "users",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.biodataSpousePreferenceInfos": {
+      "name": "biodataSpousePreferenceInfos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(36)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "biodataId": {
+          "name": "biodataId",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "age": {
+          "name": "age",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "skinTone": {
+          "name": "skinTone",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "height": {
+          "name": "height",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "educationalQualification": {
+          "name": "educationalQualification",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "religiousEducationalQualification": {
+          "name": "religiousEducationalQualification",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "address": {
+          "name": "address",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "maritalStatus": {
+          "name": "maritalStatus",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "specialCategory": {
+          "name": "specialCategory",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "religiousType": {
+          "name": "religiousType",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "occupation": {
+          "name": "occupation",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "familyBackground": {
+          "name": "familyBackground",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "secondMarrige": {
+          "name": "secondMarrige",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "location": {
+          "name": "location",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qualities": {
+          "name": "qualities",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdBy": {
+          "name": "createdBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updatedBy": {
+          "name": "updatedBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "biodataSpousePreferenceInfos_biodataId_biodatas_id_fk": {
+          "name": "biodataSpousePreferenceInfos_biodataId_biodatas_id_fk",
+          "tableFrom": "biodataSpousePreferenceInfos",
+          "tableTo": "biodatas",
+          "columnsFrom": [
+            "biodataId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.users": {
       "name": "users",
       "schema": "",
@@ -26,18 +1504,89 @@
           "primaryKey": false,
           "notNull": true
         },
+        "emailConfirmed": {
+          "name": "emailConfirmed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "phoneNumber": {
+          "name": "phoneNumber",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "phoneConfirmed": {
+          "name": "phoneConfirmed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
         "passwordHash": {
           "name": "passwordHash",
           "type": "varchar",
           "primaryKey": false,
           "notNull": true
         },
-        "created_at": {
-          "name": "created_at",
+        "refreshToken": {
+          "name": "refreshToken",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "refreshTokenExpiryTime": {
+          "name": "refreshTokenExpiryTime",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lockoutEnabled": {
+          "name": "lockoutEnabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "lockoutEnd": {
+          "name": "lockoutEnd",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false,
           "default": "now()"
+        },
+        "failedAccessCount": {
+          "name": "failedAccessCount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "createdBy": {
+          "name": "createdBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updatedBy": {
+          "name": "updatedBy",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -49,6 +1598,13 @@
           "nullsNotDistinct": false,
           "columns": [
             "email"
+          ]
+        },
+        "users_phoneNumber_unique": {
+          "name": "users_phoneNumber_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "phoneNumber"
           ]
         }
       },

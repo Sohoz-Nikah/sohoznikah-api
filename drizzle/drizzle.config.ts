@@ -3,8 +3,8 @@ config();
 
 export default {
   dialect: "postgresql",
-  schema: "./schemas",
-  out: "./migrations",
+  schema: "./drizzle/schemas/",
+  out: "./drizzle/migrations",
   dbCredentials: {
     url: process.env.DATABASE_URL,
   },
