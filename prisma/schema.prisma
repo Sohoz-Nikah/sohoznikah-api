@@ -1,0 +1,428 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL_LOCAL")
+}
+
+/**
+ * ======================= User ===========================
+ */
+model User {
+    id                     String       @id @default(uuid())
+    code                   String       @unique
+    name                   String
+    email                  String       @unique
+    emailConfirmed         Boolean      @default(false)
+    phoneNumber            String       @unique
+    phoneConfirmed         Boolean      @default(false)
+    passwordHash           String
+    gender                 GenderOption
+    passwordChangedAt      DateTime?
+    refreshToken           String?
+    refreshTokenExpiryTime DateTime?
+    lockoutEnabled         Boolean      @default(false)
+    lockoutEnd             DateTime?    @default(now())
+    failedAccessCount      Int          @default(0)
+    createdBy              String?
+    createdAt              DateTime     @default(now())
+    updatedBy              String?
+    updatedAt              DateTime?
+
+    otp       Int?
+    otpExpiry DateTime?
+    role      UserRole   @default(USER)
+    status    UserStatus @default(PENDING)
+    isDeleted Boolean    @default(false)
+    token     Int        @default(0)
+
+    biodatas          Biodata[]
+    favouriteBiodata  FavouriteBiodata[]
+    shortlistBiodata  ShortlistBiodata[]
+    sentProposals     Proposal[]         @relation("SentProposals")
+    receivedProposals Proposal[]         @relation("ReceivedProposals")
+    contactAccess     ContactAccess[]
+}
+
+enum UserRole {
+    USER
+    ADMIN
+    SUPER_ADMIN
+}
+
+enum UserStatus {
+    PENDING
+    ACTIVE
+    BLOCKED
+}
+
+enum GenderOption {
+    MALE
+    FEMALE
+    OTHER
+}
+
+/**
+ * =======================  Biodata  ==========================
+ */
+model Biodata {
+    id                                  String    @id @default(uuid())
+    userId                              String
+    preApprovalAcceptTerms              Boolean   @default(false)
+    preApprovalOathTruthfulInfo         Boolean   @default(false)
+    preApprovalOathLegalResponsibility  Boolean   @default(false)
+    postApprovalOathTruthfulInfo        Boolean   @default(false)
+    postApprovalOathNoMisuse            Boolean   @default(false)
+    postApprovalOathLegalResponsibility Boolean   @default(false)
+    profilePic                          String?
+    createdBy                           String?
+    createdAt                           DateTime  @default(now())
+    updatedBy                           String?
+    updatedAt                           DateTime?
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    primaryInfos          BiodataPrimaryInfo[]
+    generalInfos          BiodataGeneralInfo[]
+    addressInfos          BiodataAddressInfo[]
+    educationInfos        BiodataEducationInfo[]
+    educationDegrees      BiodataEducationInfoDegree[]
+    occupationInfos       BiodataOccupationInfo[]
+    familyInfos           BiodataFamilyInfo[]
+    familySiblings        BiodataFamilyInfoSibling[]
+    religiousInfos        BiodataReligiousInfo[]
+    personalInfos         BiodataPersonalInfo[]
+    marriageInfos         BiodataMarriageInfo[]
+    spousePreferenceInfos BiodataSpousePreferenceInfo[]
+
+    primaryInfoGuardianContacts BiodataPrimaryInfoGuardianContact[]
+    favouriteBiodata            FavouriteBiodata[]
+    shortlistBiodata            ShortlistBiodata[]
+    Proposal                    Proposal[]
+    ContactAccess               ContactAccess[]
+}
+
+model BiodataPrimaryInfo {
+    id          String    @id @default(uuid())
+    biodataId   String
+    biodataType String?
+    biodataFor  String?
+    fullName    String?
+    fatherName  String?
+    motherName  String?
+    email       String?
+    phoneNumber String?
+    createdBy   String?
+    createdAt   DateTime  @default(now())
+    updatedBy   String?
+    updatedAt   DateTime?
+
+    biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+}
+
+model BiodataGeneralInfo {
+    id            String    @id @default(uuid())
+    biodataId     String
+    dateOfBirth   String?
+    maritalStatus String?
+    skinTone      String?
+    height        String?
+    weight        String?
+    bloodGroup    String?
+    nationality   String?
+    createdBy     String?
+    createdAt     DateTime  @default(now())
+    updatedBy     String?
+    updatedAt     DateTime?
+
+    biodata       Biodata              @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+    nationalities BiodataNationality[]
+}
+
+model BiodataNationality {
+    id                   String @id @default(uuid())
+    biodataGeneralInfoId String
+    country              String // eg. "Bangladesh", "USA", etc.
+
+    biodataGeneralInfo BiodataGeneralInfo @relation(fields: [biodataGeneralInfoId], references: [id], onDelete: Cascade)
+}
+
+model BiodataAddressInfo {
+    id                String      @id @default(uuid())
+    biodataId         String
+    type              AddressType // 'PRESENT' or 'PERMANENT'
+    location          String?
+    state             String?
+    city              String?
+    country           String?
+    cityzenshipStatus String?
+    createdBy         String?
+    createdAt         DateTime    @default(now())
+    updatedBy         String?
+    updatedAt         DateTime?
+
+    biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+}
+
+enum AddressType {
+    PRESENT
+    PERMANENT
+}
+
+model BiodataEducationInfo {
+    id                 String    @id @default(uuid())
+    biodataId          String
+    type               String?
+    highestDegree      String?
+    religiousEducation String?
+    detail             String?
+    createdBy          String?
+    createdAt          DateTime  @default(now())
+    updatedBy          String?
+    updatedAt          DateTime?
+
+    biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+}
+
+model BiodataOccupationInfo {
+    id            String    @id @default(uuid())
+    biodataId     String
+    occupations   String?
+    detail        String?
+    monthlyIncome String?
+    createdBy     String?
+    createdAt     DateTime  @default(now())
+    updatedBy     String?
+    updatedAt     DateTime?
+
+    biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+}
+
+model BiodataFamilyInfo {
+    id                String    @id @default(uuid())
+    biodataId         String
+    parentsAlive      String?
+    fatherOccupation  String?
+    motherOccupation  String?
+    fatherSideDetail  String?
+    motherSideDetail  String?
+    familyType        String?
+    familyBackground  String?
+    livingCondition   String?
+    wealthDescription String?
+    createdBy         String?
+    createdAt         DateTime  @default(now())
+    updatedBy         String?
+    updatedAt         DateTime?
+
+    biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+}
+
+model BiodataFamilyInfoSibling {
+    id            String    @id @default(uuid())
+    biodataId     String
+    type          String?
+    occupation    String?
+    maritalStatus String?
+    children      String?
+    createdBy     String?
+    createdAt     DateTime  @default(now())
+    updatedBy     String?
+    updatedAt     DateTime?
+
+    biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+}
+
+model BiodataReligiousInfo {
+    id                            String                 @id @default(uuid())
+    biodataId                     String
+    religiousLifestyle            ReligiousLifestyleType
+    ideology                      String?
+    madhab                        String?
+    praysFiveTimes                String?
+    hasQazaPrayers                String?
+    canReciteQuranProperly        String?
+    avoidsHaramIncome             String?
+    modestDressing                String?
+    followsMahramRules            String?
+    beliefAboutPirMurshidAndMazar String?
+    practicingSince               String?
+    createdBy                     String?
+    createdAt                     DateTime               @default(now())
+    updatedBy                     String?
+    updatedAt                     DateTime?
+
+    biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+}
+
+enum ReligiousLifestyleType {
+    NON_PRACTICING
+    TRYING
+    FULLY_PRACTICING
+}
+
+model BiodataPersonalInfo {
+    id                       String    @id @default(uuid())
+    biodataId                String
+    beardStatus              String?
+    preferredOutfit          String?
+    entertainmentPreferences String?
+    healthConditions         String?
+    personalTraits           String?
+    genderEqualityView       String?
+    lgbtqOpinion             String?
+    specialConditions        String?
+    createdBy                String?
+    createdAt                DateTime  @default(now())
+    updatedBy                String?
+    updatedAt                DateTime?
+
+    biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+}
+
+model BiodataMarriageInfo {
+    id                      String    @id @default(uuid())
+    biodataId               String
+    guardianApproval        String?
+    continueStudy           String?
+    careerPlan              String?
+    residence               String?
+    arrangeHijab            String?
+    dowryExpectation        String?
+    allowShowingPhotoOnline String?
+    additionalMarriageInfo  String?
+    createdBy               String?
+    createdAt               DateTime  @default(now())
+    updatedBy               String?
+    updatedAt               DateTime?
+
+    biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+}
+
+model BiodataSpousePreferenceInfo {
+    id                                String    @id @default(uuid())
+    biodataId                         String
+    age                               String?
+    skinTone                          String?
+    height                            String?
+    educationalQualification          String?
+    religiousEducationalQualification String?
+    address                           String?
+    maritalStatus                     String?
+    specialCategory                   String?
+    religiousType                     String?
+    occupation                        String?
+    familyBackground                  String?
+    secondMarrige                     String?
+    location                          String?
+    qualities                         String?
+    createdBy                         String?
+    createdAt                         DateTime  @default(now())
+    updatedBy                         String?
+    updatedAt                         DateTime?
+
+    biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+}
+
+model BiodataEducationInfoDegree {
+    id        String    @id @default(uuid())
+    biodataId String
+    name      String?
+    passYear  String?
+    group     String?
+    institute String?
+    createdBy String?
+    createdAt DateTime  @default(now())
+    updatedBy String?
+    updatedAt DateTime?
+
+    biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+}
+
+model BiodataPrimaryInfoGuardianContact {
+    id          String    @id @default(uuid())
+    biodataId   String
+    relation    String?
+    fullName    String?
+    phoneNumber String?
+    createdBy   String?
+    createdAt   DateTime  @default(now())
+    updatedBy   String?
+    updatedAt   DateTime?
+
+    biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+}
+
+/**
+ * ===============================  Favourite list  =====================
+ */
+
+model FavouriteBiodata {
+    id        String   @id @default(uuid())
+    userId    String
+    biodataId String
+    createdAt DateTime @default(now())
+
+    user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, biodataId]) // Prevent duplicate favourites
+}
+
+/**
+ * =========================  Short list  ===========================
+ */
+model ShortlistBiodata {
+    id        String   @id @default(uuid())
+    userId    String
+    biodataId String
+    createdAt DateTime @default(now())
+
+    user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, biodataId]) // Prevent duplicate shortlists
+}
+
+/**
+ * =========================  Proposal  =============================
+ */
+model Proposal {
+    id          String         @id @default(uuid())
+    senderId    String
+    receiverId  String
+    biodataId   String
+    status      ProposalStatus @default(PENDING)
+    createdAt   DateTime       @default(now())
+    respondedAt DateTime?
+    isDeleted   Boolean        @default(false)
+
+    sender   User    @relation("SentProposals", fields: [senderId], references: [id])
+    receiver User    @relation("ReceivedProposals", fields: [receiverId], references: [id])
+    biodata  Biodata @relation(fields: [biodataId], references: [id])
+}
+
+enum ProposalStatus {
+    PENDING
+    ACCEPTED
+    REJECTED
+    TOKEN_WITHDRAWN
+}
+
+/**
+ * =========================  Contact Access =============================
+ */
+model ContactAccess {
+    id        String   @id @default(uuid())
+    userId    String
+    biodataId String
+    createdAt DateTime @default(now())
+    isDeleted Boolean  @default(false)
+
+    user    User    @relation(fields: [userId], references: [id])
+    biodata Biodata @relation(fields: [biodataId], references: [id])
+
+    @@unique([userId, biodataId])
+}
