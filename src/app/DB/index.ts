@@ -1,25 +1,25 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import config from "../config";
-import prisma from "../shared/prisma";
-import { hashedPassword } from "../helper/hashPasswordHelper";
+import config from '../config';
+import prisma from '../shared/prisma';
+import { hashedPassword } from '../helper/hashPasswordHelper';
 
 const seedSuperAdmin = async () => {
   try {
     // Hash the password
     const newPass: string = await hashedPassword(
-      config.super_admin.pass as string
+      config.super_admin.pass as string,
     );
 
     const superUser = {
-      userId: "SA-1",
+      code: 'SA-1',
       name: config.super_admin.name as string,
       email: config.super_admin.email as string,
       emailConfirmed: true,
       phoneNumber: config.super_admin.phoneNumber as string,
-      phoneConfirmed: true,
       passwordHash: newPass,
-      role: "SUPER_ADMIN" as const,
-      status: "ACTIVE" as const,
+      gender: 'MALE' as const,
+      role: 'SUPER_ADMIN' as const,
+      status: 'ACTIVE' as const,
       isDeleted: false,
     };
 

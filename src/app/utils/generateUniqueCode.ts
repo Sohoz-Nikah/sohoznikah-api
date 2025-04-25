@@ -1,42 +1,49 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { PrismaClient } from "@prisma/client";
-import prisma from "../shared/prisma";
+import { PrismaClient } from '@prisma/client';
+import prisma from '../shared/prisma';
 
 interface GenerateCodeProps {
   prefix: string;
   model: keyof PrismaClient;
   padStart?: number;
+  gender?: string;
 }
 
 const generateUniqueCode = async ({
   prefix,
   model,
+  gender,
 }: GenerateCodeProps): Promise<string> => {
   const prismaModel = prisma[model as keyof PrismaClient];
 
-  // Check if model exists in Prisma
   if (
     !prismaModel ||
-    typeof prismaModel !== "object" ||
-    !("findFirst" in prismaModel)
+    typeof prismaModel !== 'object' ||
+    !('findMany' in prismaModel)
   ) {
     throw new Error(`Invalid Prisma model: ${String(model)}`);
   }
 
-  // Find the latest entry based on the code
-  const lastEntry = await (prismaModel as any).findFirst({
-    orderBy: { code: "desc" },
-    select: { code: true },
+  const allCodes = await (prismaModel as any).findMany({
+    where: {
+      gender,
+      code: {
+        startsWith: `${prefix}-`,
+      },
+    },
+    select: {
+      code: true,
+    },
   });
 
-  // Extract last number from the code (e.g., C-009 → 9, SC-021 → 21)
-  const lastNumber = lastEntry?.code
-    ? parseInt(lastEntry.code.split("-")[1], 10)
-    : 0;
-  const newNumber = lastNumber + 1;
+  const maxNumber = allCodes.reduce((max: number, entry: { code: string }) => {
+    const parts = entry.code.split('-');
+    const numberPart = parseInt(parts[1], 10);
+    return numberPart > max ? numberPart : max;
+  }, 0);
 
-  // Generate new unique code (e.g., M-1, F-1)
-  return `${prefix}-${String(newNumber)}`;
+  const newNumber = maxNumber + 1;
+  return `${prefix}-${newNumber}`;
 };
 
 export default generateUniqueCode;

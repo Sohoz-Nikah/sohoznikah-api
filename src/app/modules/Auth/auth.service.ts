@@ -1,24 +1,24 @@
-import * as bcrypt from "bcryptjs";
-import prisma from "../../shared/prisma";
-import httpStatus from "http-status";
-import { jwtHelpers } from "../../helper/jwtHelpers";
-import config from "../../config";
-import { JwtPayload } from "jsonwebtoken";
-import ApiError from "../../errors/ApiError";
-import { Request } from "express";
-import { hashedPassword } from "../../helper/hashPasswordHelper";
-import { GenderOption, User, UserRole, UserStatus } from "@prisma/client";
-import crypto from "crypto";
-import { sendEmail } from "../../helper/sendEmail";
+import * as bcrypt from 'bcryptjs';
+import prisma from '../../shared/prisma';
+import httpStatus from 'http-status';
+import { jwtHelpers } from '../../helper/jwtHelpers';
+import config from '../../config';
+import { JwtPayload } from 'jsonwebtoken';
+import ApiError from '../../errors/ApiError';
+import { Request } from 'express';
+import { hashedPassword } from '../../helper/hashPasswordHelper';
+import { GenderOption, User, UserRole, UserStatus } from '@prisma/client';
+import crypto from 'crypto';
+import { sendEmail } from '../../helper/sendEmail';
 import {
   IChangePassword,
   ILoginUser,
   ILoginUserResponse,
   IRefreshTokenResponse,
-} from "./auth.interface";
-import { AuthUtils } from "./auth.utils";
-import { exclude } from "../../helper/exclude";
-import generateUniqueCode from "../../utils/generateUniqueCode";
+} from './auth.interface';
+import { AuthUtils } from './auth.utils';
+import { exclude } from '../../helper/exclude';
+import generateUniqueCode from '../../utils/generateUniqueCode';
 
 const register = async (req: Request): Promise<Partial<User>> => {
   const { name, email, phoneNumber, gender, password } = req.body;
@@ -28,21 +28,32 @@ const register = async (req: Request): Promise<Partial<User>> => {
   });
 
   if (user) {
-    throw new ApiError(httpStatus.NOT_FOUND, "User already exists");
+    throw new ApiError(httpStatus.NOT_FOUND, 'User already exists');
   }
   let generatedId;
   if (gender === GenderOption.MALE) {
-    generatedId = await generateUniqueCode({ prefix: "M", model: "user" });
+    generatedId = await generateUniqueCode({
+      prefix: 'M',
+      model: 'user',
+      gender: GenderOption.MALE,
+    });
   } else if (gender === GenderOption.FEMALE) {
-    generatedId = await generateUniqueCode({ prefix: "F", model: "user" });
+    generatedId = await generateUniqueCode({
+      prefix: 'F',
+      model: 'user',
+      gender: GenderOption.FEMALE,
+    });
   } else {
-    generatedId = await generateUniqueCode({ prefix: "O", model: "user" });
+    generatedId = await generateUniqueCode({
+      prefix: 'O',
+      model: 'user',
+      gender: GenderOption.OTHER,
+    });
   }
-
   // Hash the password
   const hashedPassword: string = await bcrypt.hash(
     password,
-    Number(config.bcrypt_salt_rounds)
+    Number(config.bcrypt_salt_rounds),
   );
 
   // Generate OTP and expiry
@@ -65,17 +76,27 @@ const register = async (req: Request): Promise<Partial<User>> => {
 
   // Remove sensitive data
   const safeUser = exclude(result, [
-    "passwordHash",
-    "otp",
-    "otpExpiry",
-    "passwordChangedAt",
+    'emailConfirmed',
+    'passwordHash',
+    'refreshToken',
+    'refreshTokenExpiryTime',
+    'lockoutEnabled',
+    'lockoutEnd',
+    'failedAccessCount',
+    'otp',
+    'otpExpiry',
+    'passwordChangedAt',
+    'createdBy',
+    'updatedBy',
+    'createdAt',
+    'updatedAt',
   ]);
 
   // Email verification link with OTP
-  const verfiryLink: string = `${config.node_env === "production" ? config.frontend_url.live : config.frontend_url.local}/verify-email?email=${req.body.email}&otp=${otp}`;
+  const verfiryLink: string = `${config.node_env === 'production' ? config.frontend_url.live : config.frontend_url.local}/verify-email?email=${req.body.email}&otp=${otp}`;
 
   // Email content
-  const subject = "Verify Your Email";
+  const subject = 'Verify Your Email';
   await sendEmail(
     req.body.email,
     subject,
@@ -93,7 +114,7 @@ const register = async (req: Request): Promise<Partial<User>> => {
       <p>Best regards,</p>
       <p>The Seeds Team</p>
     </div>
-    `
+    `,
   );
 
   return safeUser;
@@ -103,8 +124,8 @@ const verifyOtp = async (payload: Partial<User>) => {
   const { email, otp } = payload;
 
   // Validate input
-  if (!email || !otp || typeof otp !== "number") {
-    throw new ApiError(httpStatus.BAD_REQUEST, "Invalid email or OTP provided");
+  if (!email || !otp || typeof otp !== 'number') {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid email or OTP provided');
   }
 
   // Fetch required user fields
@@ -114,12 +135,12 @@ const verifyOtp = async (payload: Partial<User>) => {
   });
 
   if (!user || !user.otp || !user.otpExpiry) {
-    throw new ApiError(httpStatus.NOT_FOUND, "User not found or no OTP found");
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found or no OTP found');
   }
 
   // Check OTP validity and expiration
   if (user.otp !== otp || new Date() > user.otpExpiry) {
-    throw new ApiError(httpStatus.UNAUTHORIZED, "Invalid or expired OTP");
+    throw new ApiError(httpStatus.UNAUTHORIZED, 'Invalid or expired OTP');
   }
 
   // Activate user and clear OTP fields
@@ -129,6 +150,7 @@ const verifyOtp = async (payload: Partial<User>) => {
       emailConfirmed: true,
       otp: null,
       otpExpiry: null,
+      status: UserStatus.ACTIVE,
     },
   });
 };
@@ -141,25 +163,25 @@ const loginUser = async (payload: ILoginUser): Promise<ILoginUserResponse> => {
     where: { email },
   });
   if (!isUserExist) {
-    throw new ApiError(httpStatus.NOT_FOUND, "User does not exist");
+    throw new ApiError(httpStatus.NOT_FOUND, 'User does not exist');
   }
 
   // Check if user is deleted before checking the password
   if (isUserExist.isDeleted) {
-    throw new ApiError(httpStatus.NOT_FOUND, "User is Deleted!!!");
+    throw new ApiError(httpStatus.NOT_FOUND, 'User is Deleted!!!');
   }
 
   // Check if user status before checking the password
-  if (isUserExist.status === UserStatus.PENDING) {
-    throw new ApiError(
-      httpStatus.FORBIDDEN,
-      "Your account is under review. Please contact support!!!"
-    );
-  }
   if (isUserExist.status === UserStatus.BLOCKED) {
     throw new ApiError(
       httpStatus.FORBIDDEN,
-      "Your account is Blocked. Please contact support!!!"
+      'Your account is Blocked. Please contact support!!!',
+    );
+  }
+  if (isUserExist.status === UserStatus.PENDING) {
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      'Please verify you email before login!!!',
     );
   }
 
@@ -168,7 +190,7 @@ const loginUser = async (payload: ILoginUser): Promise<ILoginUserResponse> => {
     isUserExist.passwordHash &&
     !(await AuthUtils.comparePasswords(password, isUserExist.passwordHash))
   ) {
-    throw new ApiError(httpStatus.UNAUTHORIZED, "Password is incorrect");
+    throw new ApiError(httpStatus.UNAUTHORIZED, 'Password is incorrect');
   }
 
   const { id: userId, role } = isUserExist;
@@ -177,13 +199,13 @@ const loginUser = async (payload: ILoginUser): Promise<ILoginUserResponse> => {
   const accessToken = jwtHelpers.createToken(
     { userId, role, email },
     config.jwt.access_secret as string,
-    config.jwt.access_expires_in as string
+    config.jwt.access_expires_in as string,
   );
 
   const refreshToken = jwtHelpers.createToken(
     { userId, role },
     config.jwt.refresh_secret as string,
-    config.jwt.refresh_expires_in as string
+    config.jwt.refresh_expires_in as string,
   );
 
   return {
@@ -197,10 +219,10 @@ const refreshToken = async (token: string): Promise<IRefreshTokenResponse> => {
   try {
     verifiedToken = jwtHelpers.verifyToken(
       token,
-      config.jwt.refresh_secret as string
+      config.jwt.refresh_secret as string,
     );
   } catch {
-    throw new ApiError(httpStatus.FORBIDDEN, "Invalid Refresh Token");
+    throw new ApiError(httpStatus.FORBIDDEN, 'Invalid Refresh Token');
   }
 
   const { userId, role } = verifiedToken;
@@ -210,25 +232,25 @@ const refreshToken = async (token: string): Promise<IRefreshTokenResponse> => {
     where: { id: userId },
   });
   if (!isUserExist) {
-    throw new ApiError(httpStatus.NOT_FOUND, "User does not exist");
+    throw new ApiError(httpStatus.NOT_FOUND, 'User does not exist');
   }
 
   // Check if user is deleted before checking the password
   if (isUserExist.isDeleted) {
-    throw new ApiError(httpStatus.NOT_FOUND, "User is Deleted!!!");
+    throw new ApiError(httpStatus.NOT_FOUND, 'User is Deleted!!!');
   }
 
   // Check if user status before checking the password
   if (isUserExist.status === UserStatus.PENDING) {
     throw new ApiError(
       httpStatus.FORBIDDEN,
-      "Your account is under review. Please contact support!!!"
+      'Your account is under review. Please contact support!!!',
     );
   }
   if (isUserExist.status === UserStatus.BLOCKED) {
     throw new ApiError(
       httpStatus.FORBIDDEN,
-      "Your account is Blocked. Please contact support!!!"
+      'Your account is Blocked. Please contact support!!!',
     );
   }
 
@@ -236,7 +258,7 @@ const refreshToken = async (token: string): Promise<IRefreshTokenResponse> => {
   const newAccessToken = jwtHelpers.createToken(
     { userId: isUserExist.id, role },
     config.jwt.access_secret as string,
-    config.jwt.access_expires_in as string
+    config.jwt.access_expires_in as string,
   );
 
   return {
@@ -246,7 +268,7 @@ const refreshToken = async (token: string): Promise<IRefreshTokenResponse> => {
 
 const changePassword = async (
   user: JwtPayload | null,
-  payload: IChangePassword
+  payload: IChangePassword,
 ): Promise<void> => {
   const { oldPassword, newPassword } = payload;
   const isUserExist = await prisma.user.findUniqueOrThrow({
@@ -254,7 +276,7 @@ const changePassword = async (
   });
 
   if (!isUserExist) {
-    throw new ApiError(httpStatus.NOT_FOUND, "User does not exist");
+    throw new ApiError(httpStatus.NOT_FOUND, 'User does not exist');
   }
 
   // checking old password
@@ -262,7 +284,7 @@ const changePassword = async (
     isUserExist.passwordHash &&
     !(await AuthUtils.comparePasswords(oldPassword, isUserExist.passwordHash))
   ) {
-    throw new ApiError(httpStatus.UNAUTHORIZED, "Old Password is incorrect");
+    throw new ApiError(httpStatus.UNAUTHORIZED, 'Old Password is incorrect');
   }
 
   const hashPassword = await hashedPassword(newPassword);
@@ -285,7 +307,7 @@ const forgotPass = async (email: string) => {
   });
 
   if (!user) {
-    throw new ApiError(httpStatus.NOT_FOUND, "User does not exist!");
+    throw new ApiError(httpStatus.NOT_FOUND, 'User does not exist!');
   }
 
   // Generate password reset token
@@ -293,7 +315,7 @@ const forgotPass = async (email: string) => {
 
   // Construct reset password link
   const resetLink = `${
-    config.node_env === "production"
+    config.node_env === 'production'
       ? config.frontend_url.live
       : config.frontend_url.local
   }/reset-password?id=${user.id}&token=${passResetToken}`;
@@ -302,7 +324,7 @@ const forgotPass = async (email: string) => {
   const userRole = user.role || UserRole.USER; // Fallback if role is null/undefined
 
   // Email subject and content
-  const subject = "Reset Your Password";
+  const subject = 'Reset Your Password';
   const emailContent = `
     <!DOCTYPE html>
     <html lang="en">
@@ -353,16 +375,16 @@ const forgotPass = async (email: string) => {
 
 const resetPassword = async (
   payload: { id: string; newPassword: string },
-  token: string
+  token: string,
 ) => {
   // Verify reset token first (Prevents unnecessary DB query)
   const decoded = jwtHelpers.verifyToken(
     token,
-    config.jwt.refresh_secret as string // Use reset token secret
+    config.jwt.access_secret as string, // Use reset token secret
   );
 
   if (!decoded || !decoded.id || decoded.id !== payload.id) {
-    throw new ApiError(httpStatus.UNAUTHORIZED, "Invalid or expired token!");
+    throw new ApiError(httpStatus.UNAUTHORIZED, 'Invalid or expired token!');
   }
 
   // Fetch only necessary user fields
@@ -372,13 +394,13 @@ const resetPassword = async (
   });
 
   if (!user) {
-    throw new ApiError(httpStatus.NOT_FOUND, "User not found!");
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found!');
   }
 
   // Hash new password
   const hashedPassword = await bcrypt.hash(
     payload.newPassword,
-    Number(config.bcrypt_salt_rounds)
+    Number(config.bcrypt_salt_rounds),
   );
 
   // Update password using transaction (ensures atomic update)

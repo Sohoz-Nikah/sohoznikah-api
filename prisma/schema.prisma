@@ -17,7 +17,6 @@ model User {
     email                  String       @unique
     emailConfirmed         Boolean      @default(false)
     phoneNumber            String       @unique
-    phoneConfirmed         Boolean      @default(false)
     passwordHash           String
     gender                 GenderOption
     passwordChangedAt      DateTime?
@@ -38,12 +37,41 @@ model User {
     isDeleted Boolean    @default(false)
     token     Int        @default(0)
 
-    biodatas          Biodata[]
-    favouriteBiodata  FavouriteBiodata[]
-    shortlistBiodata  ShortlistBiodata[]
-    sentProposals     Proposal[]         @relation("SentProposals")
-    receivedProposals Proposal[]         @relation("ReceivedProposals")
-    contactAccess     ContactAccess[]
+    // Relations
+    favouriteBiodata            FavouriteBiodata[]
+    shortlistBiodata            ShortlistBiodata[]
+    sentProposals               Proposal[]                          @relation("SentProposals")
+    receivedProposals           Proposal[]                          @relation("ReceivedProposals")
+    contactAccess               ContactAccess[]
+    biodatas                    Biodata[]                           @relation("CreatedBiodataUser")
+    biodatasCreated             Biodata[]                           @relation("BiodataCreatedBy")
+    biodatasUpdated             Biodata[]                           @relation("BiodataUpdatedBy")
+    primaryInfoCreated          BiodataPrimaryInfo[]                @relation("PrimaryInfoCreatedBy")
+    primaryInfoUpdated          BiodataPrimaryInfo[]                @relation("PrimaryInfoUpdatedBy")
+    generalInfoCreated          BiodataGeneralInfo[]                @relation("GeneralInfoCreatedBy")
+    generalInfoUpdated          BiodataGeneralInfo[]                @relation("GeneralInfoUpdatedBy")
+    addressInfoCreated          BiodataAddressInfo[]                @relation("AddressInfoCreatedBy")
+    addressInfoUpdated          BiodataAddressInfo[]                @relation("AddressInfoUpdatedBy")
+    educationInfoCreated        BiodataEducationInfo[]              @relation("EducationInfoCreatedBy")
+    educationInfoUpdated        BiodataEducationInfo[]              @relation("EducationInfoUpdatedBy")
+    occupationInfoCreated       BiodataOccupationInfo[]             @relation("OccupationInfoCreatedBy")
+    occupationInfoUpdated       BiodataOccupationInfo[]             @relation("OccupationInfoUpdatedBy")
+    familyInfoCreated           BiodataFamilyInfo[]                 @relation("FamilyInfoCreatedBy")
+    familyInfoUpdated           BiodataFamilyInfo[]                 @relation("FamilyInfoUpdatedBy")
+    familySiblingInfoCreated    BiodataFamilyInfoSibling[]          @relation("FamilySiblingInfoCreatedBy")
+    familySiblingInfoUpdated    BiodataFamilyInfoSibling[]          @relation("FamilySiblingInfoUpdatedBy")
+    religiousInfoCreated        BiodataReligiousInfo[]              @relation("ReligiousInfoCreatedBy")
+    religiousInfoUpdated        BiodataReligiousInfo[]              @relation("ReligiousInfoUpdatedBy")
+    personalInfoCreated         BiodataPersonalInfo[]               @relation("PersonalInfoCreatedBy")
+    personalInfoUpdated         BiodataPersonalInfo[]               @relation("PersonalInfoUpdatedBy")
+    marriageInfoCreated         BiodataMarriageInfo[]               @relation("MarriageInfoCreatedBy")
+    marriageInfoUpdated         BiodataMarriageInfo[]               @relation("MarriageInfoUpdatedBy")
+    spousePreferenceInfoCreated BiodataSpousePreferenceInfo[]       @relation("SpousePreferenceInfoCreatedBy")
+    spousePreferenceInfoUpdated BiodataSpousePreferenceInfo[]       @relation("SpousePreferenceInfoUpdatedBy")
+    educationInfoDegreeCreated  BiodataEducationInfoDegree[]        @relation("EducationInfoDegreeCreatedBy")
+    educationInfoDegreeUpdated  BiodataEducationInfoDegree[]        @relation("EducationInfoDegreeUpdatedBy")
+    gurdianContactCreated       BiodataPrimaryInfoGuardianContact[] @relation("GuardianContactInfoCreatedBy")
+    gurdianContactUpdated       BiodataPrimaryInfoGuardianContact[] @relation("GuardianContactInfoUpdatedBy")
 }
 
 enum UserRole {
@@ -68,21 +96,29 @@ enum GenderOption {
  * =======================  Biodata  ==========================
  */
 model Biodata {
-    id                                  String    @id @default(uuid())
+    id                                  String              @id @default(uuid())
     userId                              String
-    preApprovalAcceptTerms              Boolean   @default(false)
-    preApprovalOathTruthfulInfo         Boolean   @default(false)
-    preApprovalOathLegalResponsibility  Boolean   @default(false)
-    postApprovalOathTruthfulInfo        Boolean   @default(false)
-    postApprovalOathNoMisuse            Boolean   @default(false)
-    postApprovalOathLegalResponsibility Boolean   @default(false)
+    preApprovalAcceptTerms              Boolean             @default(false)
+    preApprovalOathTruthfulInfo         Boolean             @default(false)
+    preApprovalOathLegalResponsibility  Boolean             @default(false)
+    postApprovalOathTruthfulInfo        Boolean             @default(false)
+    postApprovalOathNoMisuse            Boolean             @default(false)
+    postApprovalOathLegalResponsibility Boolean             @default(false)
     profilePic                          String?
     createdBy                           String?
-    createdAt                           DateTime  @default(now())
+    createdAt                           DateTime            @default(now())
     updatedBy                           String?
     updatedAt                           DateTime?
+    deletedAt                           DateTime?
+    deletedBy                           String?
+    status                              BiodataStatus       @default(ACTIVE)
+    visibility                          VisibilityStatus    @default(PRIVATE)
+    verification                        BiodataVerification @default(PENDING)
 
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    // Relations
+    user    User  @relation("CreatedBiodataUser", fields: [userId], references: [id], onDelete: Cascade)
+    creator User? @relation("BiodataCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
+    updater User? @relation("BiodataUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
 
     primaryInfos          BiodataPrimaryInfo[]
     generalInfos          BiodataGeneralInfo[]
@@ -100,8 +136,26 @@ model Biodata {
     primaryInfoGuardianContacts BiodataPrimaryInfoGuardianContact[]
     favouriteBiodata            FavouriteBiodata[]
     shortlistBiodata            ShortlistBiodata[]
-    Proposal                    Proposal[]
-    ContactAccess               ContactAccess[]
+    proposal                    Proposal[]
+    contactAccess               ContactAccess[]
+    biodataChangeLog            BiodataChangeLog[]
+}
+
+enum VisibilityStatus {
+    PUBLIC
+    PRIVATE
+}
+
+enum BiodataVerification {
+    PENDING
+    APPROVED
+    REJECTED
+}
+
+enum BiodataStatus {
+    ACTIVE
+    DELETED_BY_USER
+    DELETED_BY_ADMIN
 }
 
 model BiodataPrimaryInfo {
@@ -120,10 +174,12 @@ model BiodataPrimaryInfo {
     updatedAt   DateTime?
 
     biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+    creator User?   @relation("PrimaryInfoCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
+    updater User?   @relation("PrimaryInfoUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
 }
 
 model BiodataGeneralInfo {
-    id            String    @id @default(uuid())
+    id            String               @id @default(uuid())
     biodataId     String
     dateOfBirth   String?
     maritalStatus String?
@@ -133,12 +189,14 @@ model BiodataGeneralInfo {
     bloodGroup    String?
     nationality   String?
     createdBy     String?
-    createdAt     DateTime  @default(now())
+    createdAt     DateTime             @default(now())
     updatedBy     String?
     updatedAt     DateTime?
-
-    biodata       Biodata              @relation(fields: [biodataId], references: [id], onDelete: Cascade)
     nationalities BiodataNationality[]
+
+    biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+    creator User?   @relation("GeneralInfoCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
+    updater User?   @relation("GeneralInfoUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
 }
 
 model BiodataNationality {
@@ -164,6 +222,8 @@ model BiodataAddressInfo {
     updatedAt         DateTime?
 
     biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+    creator User?   @relation("AddressInfoCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
+    updater User?   @relation("AddressInfoUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
 }
 
 enum AddressType {
@@ -184,6 +244,8 @@ model BiodataEducationInfo {
     updatedAt          DateTime?
 
     biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+    creator User?   @relation("EducationInfoCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
+    updater User?   @relation("EducationInfoUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
 }
 
 model BiodataOccupationInfo {
@@ -198,6 +260,8 @@ model BiodataOccupationInfo {
     updatedAt     DateTime?
 
     biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+    creator User?   @relation("OccupationInfoCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
+    updater User?   @relation("OccupationInfoUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
 }
 
 model BiodataFamilyInfo {
@@ -218,6 +282,8 @@ model BiodataFamilyInfo {
     updatedAt         DateTime?
 
     biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+    creator User?   @relation("FamilyInfoCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
+    updater User?   @relation("FamilyInfoUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
 }
 
 model BiodataFamilyInfoSibling {
@@ -233,6 +299,8 @@ model BiodataFamilyInfoSibling {
     updatedAt     DateTime?
 
     biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+    creator User?   @relation("FamilySiblingInfoCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
+    updater User?   @relation("FamilySiblingInfoUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
 }
 
 model BiodataReligiousInfo {
@@ -255,6 +323,8 @@ model BiodataReligiousInfo {
     updatedAt                     DateTime?
 
     biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+    creator User?   @relation("ReligiousInfoCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
+    updater User?   @relation("ReligiousInfoUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
 }
 
 enum ReligiousLifestyleType {
@@ -280,6 +350,8 @@ model BiodataPersonalInfo {
     updatedAt                DateTime?
 
     biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+    creator User?   @relation("PersonalInfoCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
+    updater User?   @relation("PersonalInfoUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
 }
 
 model BiodataMarriageInfo {
@@ -299,6 +371,8 @@ model BiodataMarriageInfo {
     updatedAt               DateTime?
 
     biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+    creator User?   @relation("MarriageInfoCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
+    updater User?   @relation("MarriageInfoUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
 }
 
 model BiodataSpousePreferenceInfo {
@@ -324,6 +398,8 @@ model BiodataSpousePreferenceInfo {
     updatedAt                         DateTime?
 
     biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+    creator User?   @relation("SpousePreferenceInfoCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
+    updater User?   @relation("SpousePreferenceInfoUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
 }
 
 model BiodataEducationInfoDegree {
@@ -339,6 +415,8 @@ model BiodataEducationInfoDegree {
     updatedAt DateTime?
 
     biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+    creator User?   @relation("EducationInfoDegreeCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
+    updater User?   @relation("EducationInfoDegreeUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
 }
 
 model BiodataPrimaryInfoGuardianContact {
@@ -353,6 +431,8 @@ model BiodataPrimaryInfoGuardianContact {
     updatedAt   DateTime?
 
     biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+    creator User?   @relation("GuardianContactInfoCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
+    updater User?   @relation("GuardianContactInfoUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
 }
 
 /**
@@ -425,4 +505,40 @@ model ContactAccess {
     biodata Biodata @relation(fields: [biodataId], references: [id])
 
     @@unique([userId, biodataId])
+}
+
+/**
+ * =================  notification  ===================
+ */
+
+model Notification {
+    id        String   @id @default(uuid())
+    type      String // e.g., "BIODATA_UPDATE", "NEW_BIODATA"
+    message   String
+    userId    String // who triggered it
+    biodataId String?
+    isRead    Boolean  @default(false)
+    createdAt DateTime @default(now())
+}
+
+/**
+ * ===================  biodata change log  ====================
+ */
+
+model BiodataChangeLog {
+    id         String             @id @default(uuid())
+    biodataId  String
+    section    String // e.g., "education", "personal", etc.
+    changedBy  String?
+    changedAt  DateTime           @default(now())
+    changeType BiodataChangeType? // "update", "delete", etc.
+    changes    Json? // Optional: what exactly changed
+
+    biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+}
+
+enum BiodataChangeType {
+    UPDATE
+    DELETE
+    ADDITION
 }
