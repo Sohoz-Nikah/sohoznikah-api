@@ -14,7 +14,7 @@ const router = express.Router();
 router.post(
   '/',
   auth([UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.USER]),
-  validateRequest(createBiodataValidationSchema),
+  // validateRequest(createBiodataValidationSchema),
 
   BiodataControllers.createABiodata,
 );

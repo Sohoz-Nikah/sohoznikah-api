@@ -16,14 +16,14 @@ model User {
     name                   String
     email                  String       @unique
     emailConfirmed         Boolean      @default(false)
-    phoneNumber            String       @unique
+    phoneNumber            String       @unique @db.VarChar(15)
     passwordHash           String
     gender                 GenderOption
     passwordChangedAt      DateTime?
     refreshToken           String?
     refreshTokenExpiryTime DateTime?
     lockoutEnabled         Boolean      @default(false)
-    lockoutEnd             DateTime?    @default(now())
+    lockoutEnd             DateTime?
     failedAccessCount      Int          @default(0)
     createdBy              String?
     createdAt              DateTime     @default(now())
@@ -43,7 +43,7 @@ model User {
     sentProposals               Proposal[]                          @relation("SentProposals")
     receivedProposals           Proposal[]                          @relation("ReceivedProposals")
     contactAccess               ContactAccess[]
-    biodatas                    Biodata[]                           @relation("CreatedBiodataUser")
+    biodatas                    Biodata?                            @relation("CreatedBiodataUser")
     biodatasCreated             Biodata[]                           @relation("BiodataCreatedBy")
     biodatasUpdated             Biodata[]                           @relation("BiodataUpdatedBy")
     primaryInfoCreated          BiodataPrimaryInfo[]                @relation("PrimaryInfoCreatedBy")
@@ -72,6 +72,7 @@ model User {
     educationInfoDegreeUpdated  BiodataEducationInfoDegree[]        @relation("EducationInfoDegreeUpdatedBy")
     gurdianContactCreated       BiodataPrimaryInfoGuardianContact[] @relation("GuardianContactInfoCreatedBy")
     gurdianContactUpdated       BiodataPrimaryInfoGuardianContact[] @relation("GuardianContactInfoUpdatedBy")
+    Notification                Notification[]
 }
 
 enum UserRole {
@@ -96,26 +97,26 @@ enum GenderOption {
  * =======================  Biodata  ==========================
  */
 model Biodata {
-    id                                  String              @id @default(uuid())
-    userId                              String
-    preApprovalAcceptTerms              Boolean             @default(false)
-    preApprovalOathTruthfulInfo         Boolean             @default(false)
-    preApprovalOathLegalResponsibility  Boolean             @default(false)
-    postApprovalOathTruthfulInfo        Boolean             @default(false)
-    postApprovalOathNoMisuse            Boolean             @default(false)
-    postApprovalOathLegalResponsibility Boolean             @default(false)
+    id                                  String           @id @default(uuid())
+    userId                              String           @unique
+    preApprovalAcceptTerms              Boolean          @default(false)
+    preApprovalOathTruthfulInfo         Boolean          @default(false)
+    preApprovalOathLegalResponsibility  Boolean          @default(false)
+    postApprovalOathTruthfulInfo        Boolean          @default(false)
+    postApprovalOathNoMisuse            Boolean          @default(false)
+    postApprovalOathLegalResponsibility Boolean          @default(false)
     profilePic                          String?
     createdBy                           String?
-    createdAt                           DateTime            @default(now())
+    createdAt                           DateTime         @default(now())
     updatedBy                           String?
     updatedAt                           DateTime?
     deletedAt                           DateTime?
     deletedBy                           String?
-    status                              BiodataStatus       @default(ACTIVE)
-    visibility                          VisibilityStatus    @default(PRIVATE)
-    verification                        BiodataVerification @default(PENDING)
+    status                              BiodataStatus    @default(PENDING)
+    visibility                          VisibilityStatus @default(PRIVATE)
 
     // Relations
+
     user    User  @relation("CreatedBiodataUser", fields: [userId], references: [id], onDelete: Cascade)
     creator User? @relation("BiodataCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
     updater User? @relation("BiodataUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
@@ -146,28 +147,24 @@ enum VisibilityStatus {
     PRIVATE
 }
 
-enum BiodataVerification {
+enum BiodataStatus {
     PENDING
     APPROVED
     REJECTED
-}
-
-enum BiodataStatus {
-    ACTIVE
-    DELETED_BY_USER
-    DELETED_BY_ADMIN
+    UPDATE_REQUESTED
+    DELETE_REQUESTED
 }
 
 model BiodataPrimaryInfo {
     id          String    @id @default(uuid())
     biodataId   String
-    biodataType String?
-    biodataFor  String?
-    fullName    String?
-    fatherName  String?
-    motherName  String?
-    email       String?
-    phoneNumber String?
+    biodataType String
+    biodataFor  String
+    fullName    String
+    fatherName  String
+    motherName  String
+    email       String
+    mobile      String
     createdBy   String?
     createdAt   DateTime  @default(now())
     updatedBy   String?
@@ -179,45 +176,36 @@ model BiodataPrimaryInfo {
 }
 
 model BiodataGeneralInfo {
-    id            String               @id @default(uuid())
+    id            String    @id @default(uuid())
     biodataId     String
-    dateOfBirth   String?
-    maritalStatus String?
-    skinTone      String?
-    height        String?
-    weight        String?
-    bloodGroup    String?
-    nationality   String?
+    dateOfBirth   String
+    maritalStatus String
+    skinTone      String
+    height        String
+    weight        String
+    bloodGroup    String
+    nationality   String[]
     createdBy     String?
-    createdAt     DateTime             @default(now())
+    createdAt     DateTime  @default(now())
     updatedBy     String?
     updatedAt     DateTime?
-    nationalities BiodataNationality[]
 
     biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
     creator User?   @relation("GeneralInfoCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
     updater User?   @relation("GeneralInfoUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
 }
 
-model BiodataNationality {
-    id                   String @id @default(uuid())
-    biodataGeneralInfoId String
-    country              String // eg. "Bangladesh", "USA", etc.
-
-    biodataGeneralInfo BiodataGeneralInfo @relation(fields: [biodataGeneralInfoId], references: [id], onDelete: Cascade)
-}
-
 model BiodataAddressInfo {
-    id                String      @id @default(uuid())
+    id                String    @id @default(uuid())
     biodataId         String
-    type              AddressType // 'PRESENT' or 'PERMANENT'
-    location          String?
-    state             String?
-    city              String?
-    country           String?
+    type              String
+    location          String
+    state             String
+    city              String
+    country           String
     cityzenshipStatus String?
     createdBy         String?
-    createdAt         DateTime    @default(now())
+    createdAt         DateTime  @default(now())
     updatedBy         String?
     updatedAt         DateTime?
 
@@ -226,17 +214,12 @@ model BiodataAddressInfo {
     updater User?   @relation("AddressInfoUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
 }
 
-enum AddressType {
-    PRESENT
-    PERMANENT
-}
-
 model BiodataEducationInfo {
     id                 String    @id @default(uuid())
     biodataId          String
-    type               String?
-    highestDegree      String?
-    religiousEducation String?
+    type               String
+    highestDegree      String
+    religiousEducation String[]
     detail             String?
     createdBy          String?
     createdAt          DateTime  @default(now())
@@ -248,11 +231,29 @@ model BiodataEducationInfo {
     updater User?   @relation("EducationInfoUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
 }
 
+model BiodataEducationInfoDegree {
+    id         String    @id @default(uuid())
+    biodataId  String
+    degreeType String
+    name       String
+    passYear   String
+    group      String
+    institute  String
+    createdBy  String?
+    createdAt  DateTime  @default(now())
+    updatedBy  String?
+    updatedAt  DateTime?
+
+    biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+    creator User?   @relation("EducationInfoDegreeCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
+    updater User?   @relation("EducationInfoDegreeUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
+}
+
 model BiodataOccupationInfo {
     id            String    @id @default(uuid())
     biodataId     String
-    occupations   String?
-    detail        String?
+    occupations   String
+    detail        String
     monthlyIncome String?
     createdBy     String?
     createdAt     DateTime  @default(now())
@@ -267,7 +268,7 @@ model BiodataOccupationInfo {
 model BiodataFamilyInfo {
     id                String    @id @default(uuid())
     biodataId         String
-    parentsAlive      String?
+    parentsAlive      String
     fatherOccupation  String?
     motherOccupation  String?
     fatherSideDetail  String?
@@ -307,16 +308,16 @@ model BiodataReligiousInfo {
     id                            String                 @id @default(uuid())
     biodataId                     String
     religiousLifestyle            ReligiousLifestyleType
-    ideology                      String?
-    madhab                        String?
-    praysFiveTimes                String?
-    hasQazaPrayers                String?
-    canReciteQuranProperly        String?
-    avoidsHaramIncome             String?
-    modestDressing                String?
-    followsMahramRules            String?
-    beliefAboutPirMurshidAndMazar String?
-    practicingSince               String?
+    ideology                      String
+    madhab                        String
+    praysFiveTimes                String
+    hasQazaPrayers                String
+    canReciteQuranProperly        String
+    avoidsHaramIncome             String
+    modestDressing                String
+    followsMahramRules            String
+    beliefAboutPirMurshidAndMazar String
+    practicingSince               String
     createdBy                     String?
     createdAt                     DateTime               @default(now())
     updatedBy                     String?
@@ -336,11 +337,11 @@ enum ReligiousLifestyleType {
 model BiodataPersonalInfo {
     id                       String    @id @default(uuid())
     biodataId                String
-    beardStatus              String?
-    preferredOutfit          String?
-    entertainmentPreferences String?
-    healthConditions         String?
-    personalTraits           String?
+    beardStatus              String
+    preferredOutfit          String
+    entertainmentPreferences String
+    healthConditions         String
+    personalTraits           String
     genderEqualityView       String?
     lgbtqOpinion             String?
     specialConditions        String?
@@ -358,7 +359,7 @@ model BiodataMarriageInfo {
     id                      String    @id @default(uuid())
     biodataId               String
     guardianApproval        String?
-    continueStudy           String?
+    continueStudy           String[]
     careerPlan              String?
     residence               String?
     arrangeHijab            String?
@@ -402,33 +403,16 @@ model BiodataSpousePreferenceInfo {
     updater User?   @relation("SpousePreferenceInfoUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
 }
 
-model BiodataEducationInfoDegree {
+model BiodataPrimaryInfoGuardianContact {
     id        String    @id @default(uuid())
     biodataId String
+    relation  String?
     name      String?
-    passYear  String?
-    group     String?
-    institute String?
+    mobile    String?
     createdBy String?
     createdAt DateTime  @default(now())
     updatedBy String?
     updatedAt DateTime?
-
-    biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
-    creator User?   @relation("EducationInfoDegreeCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
-    updater User?   @relation("EducationInfoDegreeUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
-}
-
-model BiodataPrimaryInfoGuardianContact {
-    id          String    @id @default(uuid())
-    biodataId   String
-    relation    String?
-    fullName    String?
-    phoneNumber String?
-    createdBy   String?
-    createdAt   DateTime  @default(now())
-    updatedBy   String?
-    updatedAt   DateTime?
 
     biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
     creator User?   @relation("GuardianContactInfoCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
@@ -501,8 +485,8 @@ model ContactAccess {
     createdAt DateTime @default(now())
     isDeleted Boolean  @default(false)
 
-    user    User    @relation(fields: [userId], references: [id])
-    biodata Biodata @relation(fields: [biodataId], references: [id])
+    user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
 
     @@unique([userId, biodataId])
 }
@@ -517,8 +501,11 @@ model Notification {
     message   String
     userId    String // who triggered it
     biodataId String?
+    isGlobal  Boolean  @default(false)
     isRead    Boolean  @default(false)
     createdAt DateTime @default(now())
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 /**
@@ -526,12 +513,13 @@ model Notification {
  */
 
 model BiodataChangeLog {
-    id         String             @id @default(uuid())
+    id         String              @id @default(uuid())
     biodataId  String
     section    String // e.g., "education", "personal", etc.
     changedBy  String?
-    changedAt  DateTime           @default(now())
+    changedAt  DateTime            @default(now())
     changeType BiodataChangeType? // "update", "delete", etc.
+    status     BiodataChangeStatus @default(PENDING)
     changes    Json? // Optional: what exactly changed
 
     biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
@@ -541,4 +529,10 @@ enum BiodataChangeType {
     UPDATE
     DELETE
     ADDITION
+}
+
+enum BiodataChangeStatus {
+    PENDING
+    APPROVED
+    REJECTED
 }

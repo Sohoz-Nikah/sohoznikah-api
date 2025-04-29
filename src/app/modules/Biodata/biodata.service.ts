@@ -10,62 +10,216 @@ const createABiodata = async (
   req: Record<string, any>,
   creator: string,
 ): Promise<Biodata> => {
-  console.log(req.body, creator);
   const {
     userId,
-    preApprovalAcceptTerms,
-    preApprovalOathTruthfulInfo,
-    preApprovalOathLegalResponsibility,
-    postApprovalOathTruthfulInfo,
-    postApprovalOathNoMisuse,
-    postApprovalOathLegalResponsibility,
-    profilePic,
-    primaryInfos,
-    generalInfos,
-    addressInfos,
-    occupationInfos,
-    familyInfos,
-    familySiblings,
-    religiousInfos,
-    personalInfos,
-    marriageInfos,
-    spousePreferenceInfos,
-    educationInfos,
-    primaryInfoGuardianContacts,
+    firstWordsFormData,
+    primaryInfoFormData,
+    generalInfoFormData,
+    addressInfoFormData,
+    educationInfoFormData,
+    occupationInfoFormData,
+    familyInfoFormData,
+    religiousInfoFormData,
+    personalInfoFormData,
+    marriageInfoFormData,
+    spousePreferenceInfoFormData,
+    profilePicFormData,
+    finalWordsFormData,
   } = req.body;
 
-  const result = await prisma.biodata.create({
-    data: {
-      ...(preApprovalAcceptTerms && { preApprovalAcceptTerms }),
-      ...(preApprovalOathTruthfulInfo && { preApprovalOathTruthfulInfo }),
-      ...(preApprovalOathLegalResponsibility && {
-        preApprovalOathLegalResponsibility,
-      }),
-      ...(postApprovalOathTruthfulInfo && { postApprovalOathTruthfulInfo }),
-      ...(postApprovalOathNoMisuse && { postApprovalOathNoMisuse }),
-      ...(postApprovalOathLegalResponsibility && {
-        postApprovalOathLegalResponsibility,
-      }),
-      ...(profilePic && { profilePic }),
-      createdBy: creator,
+  const result = await prisma.$transaction(async prisma => {
+    // Step 1: Create Biodata
+    const biodata = await prisma.biodata.create({
+      data: {
+        createdBy: creator,
+        userId: userId,
+        ...(profilePicFormData && { profilePic: profilePicFormData.photoId }),
 
-      ...(primaryInfos && { primaryInfos: { create: primaryInfos } }),
-      ...(generalInfos && { generalInfos: { create: generalInfos } }),
-      ...(addressInfos && { addressInfos: { create: addressInfos } }),
-      ...(educationInfos && { educationInfos: { create: educationInfos } }),
-      ...(occupationInfos && { occupationInfos: { create: occupationInfos } }),
-      ...(familyInfos && { familyInfos: { create: familyInfos } }),
-      ...(familySiblings && { familySiblings: { create: familySiblings } }),
-      ...(religiousInfos && { religiousInfos: { create: religiousInfos } }),
-      ...(personalInfos && { personalInfos: { create: personalInfos } }),
-      ...(marriageInfos && { marriageInfos: { create: marriageInfos } }),
-      ...(spousePreferenceInfos && {
-        spousePreferenceInfos: { create: spousePreferenceInfos },
-      }),
-      ...(primaryInfoGuardianContacts && {
-        primaryInfoGuardianContacts: { create: primaryInfoGuardianContacts },
-      }),
-    },
+        ...(firstWordsFormData && {
+          preApprovalAcceptTerms: firstWordsFormData.preApprovalAcceptTerms,
+          preApprovalOathTruthfulInfo:
+            firstWordsFormData.preApprovalOathTruthfulInfo,
+          preApprovalOathLegalResponsibility:
+            firstWordsFormData.preApprovalOathLegalResponsibility,
+        }),
+
+        ...(finalWordsFormData && {
+          postApprovalOathTruthfulInfo:
+            finalWordsFormData.postApprovalOathTruthfulInfo,
+          postApprovalOathNoMisuse: finalWordsFormData.postApprovalOathNoMisuse,
+          postApprovalOathLegalResponsibility:
+            finalWordsFormData.postApprovalOathLegalResponsibility,
+        }),
+      },
+    });
+
+    const biodataId = biodata.id;
+
+    // Step 2: Create related models
+
+    // Primary Info
+    if (primaryInfoFormData) {
+      await prisma.biodataPrimaryInfo.create({
+        data: {
+          biodataId,
+          biodataType: primaryInfoFormData.biodataType,
+          biodataFor: primaryInfoFormData.biodataFor,
+          fullName: primaryInfoFormData.fullName,
+          fatherName: primaryInfoFormData.fatherName,
+          motherName: primaryInfoFormData.motherName,
+          email: primaryInfoFormData.email,
+          mobile: primaryInfoFormData.mobile,
+          createdBy: creator,
+        },
+      });
+
+      // General Info
+      if (generalInfoFormData) {
+        await prisma.biodataGeneralInfo.create({
+          data: {
+            biodataId,
+            ...generalInfoFormData,
+            createdBy: creator,
+          },
+        });
+      }
+
+      // Guardian Contacts
+      if (primaryInfoFormData.guardianContacts?.length) {
+        await prisma.biodataPrimaryInfoGuardianContact.createMany({
+          data: primaryInfoFormData.guardianContacts.map(contact => ({
+            biodataId,
+            relation: contact.relation,
+            name: contact.name,
+            mobile: contact.mobile,
+            createdBy: creator,
+          })),
+        });
+      }
+    }
+
+    // Address Info
+    if (addressInfoFormData?.addresses?.length) {
+      await prisma.biodataAddressInfo.createMany({
+        data: addressInfoFormData.addresses.map(address => ({
+          biodataId,
+          type: address.type,
+          location: address.location,
+          state: address.state,
+          city: address.city,
+          country: address.country,
+          cityzenshipStatus: address.cityzenshipStatus,
+          createdBy: creator,
+        })),
+      });
+    }
+
+    // Education Info
+    if (educationInfoFormData) {
+      await prisma.biodataEducationInfo.create({
+        data: {
+          biodataId,
+          type: educationInfoFormData.type,
+          highestDegree: educationInfoFormData.highestDegree,
+          religiousEducation: educationInfoFormData.religiousEducation,
+          detail: educationInfoFormData.details,
+          createdBy: creator,
+        },
+      });
+
+      // Degrees
+      if (educationInfoFormData.degrees?.length) {
+        await prisma.biodataEducationInfoDegree.createMany({
+          data: educationInfoFormData.degrees.map(degree => ({
+            biodataId,
+            degreeType: degree.degreeType,
+            name: degree.name,
+            passYear: degree.passYear,
+            group: degree.group,
+            institute: degree.institute,
+            createdBy: creator,
+          })),
+        });
+      }
+    }
+
+    // Occupation Info
+    if (occupationInfoFormData) {
+      await prisma.biodataOccupationInfo.create({
+        data: {
+          biodataId,
+          ...occupationInfoFormData,
+          createdBy: creator,
+        },
+      });
+    }
+
+    // Family Info
+    if (familyInfoFormData) {
+      await prisma.biodataFamilyInfo.create({
+        data: {
+          biodataId,
+          ...familyInfoFormData,
+          createdBy: creator,
+        },
+      });
+
+      if (familyInfoFormData.siblings?.length) {
+        await prisma.biodataFamilyInfoSibling.createMany({
+          data: familyInfoFormData.siblings.map(sibling => ({
+            biodataId,
+            ...sibling,
+            createdBy: creator,
+          })),
+        });
+      }
+    }
+
+    // Religious Info
+    if (religiousInfoFormData) {
+      await prisma.biodataReligiousInfo.create({
+        data: {
+          biodataId,
+          ...religiousInfoFormData,
+          createdBy: creator,
+        },
+      });
+    }
+
+    // Personal Info
+    if (personalInfoFormData) {
+      await prisma.biodataPersonalInfo.create({
+        data: {
+          biodataId,
+          ...personalInfoFormData,
+          createdBy: creator,
+        },
+      });
+    }
+
+    // Marriage Info
+    if (marriageInfoFormData) {
+      await prisma.biodataMarriageInfo.create({
+        data: {
+          biodataId,
+          ...marriageInfoFormData,
+          createdBy: creator,
+        },
+      });
+    }
+
+    // Spouse Preference Info
+    if (spousePreferenceInfoFormData) {
+      await prisma.biodataSpousePreferenceInfo.create({
+        data: {
+          biodataId,
+          ...spousePreferenceInfoFormData,
+          createdBy: creator,
+        },
+      });
+    }
+
+    return biodata;
   });
 
   return result;
