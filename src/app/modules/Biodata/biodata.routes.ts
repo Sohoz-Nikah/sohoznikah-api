@@ -4,10 +4,7 @@ import validateRequest from '../../middlewares/validateRequest';
 
 import { BiodataControllers } from './biodata.controller';
 import { UserRole } from '@prisma/client';
-import {
-  createBiodataValidationSchema,
-  updateBiodataValidationSchema,
-} from './biodata.validation';
+import { updateBiodataValidationSchema } from './biodata.validation';
 
 const router = express.Router();
 

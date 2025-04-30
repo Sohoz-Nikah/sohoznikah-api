@@ -252,7 +252,7 @@ model BiodataEducationInfoDegree {
 model BiodataOccupationInfo {
     id            String    @id @default(uuid())
     biodataId     String
-    occupations   String
+    occupations   String[]
     detail        String
     monthlyIncome String?
     createdBy     String?
@@ -305,33 +305,27 @@ model BiodataFamilyInfoSibling {
 }
 
 model BiodataReligiousInfo {
-    id                            String                 @id @default(uuid())
+    id                            String    @id @default(uuid())
     biodataId                     String
-    religiousLifestyle            ReligiousLifestyleType
+    type                          String
     ideology                      String
     madhab                        String
     praysFiveTimes                String
     hasQazaPrayers                String
     canReciteQuranProperly        String
     avoidsHaramIncome             String
-    modestDressing                String
-    followsMahramRules            String
-    beliefAboutPirMurshidAndMazar String
-    practicingSince               String
+    modestDressing                String?
+    followsMahramRules            String?
+    beliefAboutPirMurshidAndMazar String?
+    practicingSince               String?
     createdBy                     String?
-    createdAt                     DateTime               @default(now())
+    createdAt                     DateTime  @default(now())
     updatedBy                     String?
     updatedAt                     DateTime?
 
     biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
     creator User?   @relation("ReligiousInfoCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
     updater User?   @relation("ReligiousInfoUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
-}
-
-enum ReligiousLifestyleType {
-    NON_PRACTICING
-    TRYING
-    FULLY_PRACTICING
 }
 
 model BiodataPersonalInfo {
@@ -341,10 +335,10 @@ model BiodataPersonalInfo {
     preferredOutfit          String
     entertainmentPreferences String
     healthConditions         String
-    personalTraits           String
+    personalTraits           String[]
     genderEqualityView       String?
     lgbtqOpinion             String?
-    specialConditions        String?
+    specialConditions        String[]
     createdBy                String?
     createdAt                DateTime  @default(now())
     updatedBy                String?
@@ -379,17 +373,17 @@ model BiodataMarriageInfo {
 model BiodataSpousePreferenceInfo {
     id                                String    @id @default(uuid())
     biodataId                         String
-    age                               String?
-    skinTone                          String?
+    age                               String
+    skinTone                          String[]
     height                            String?
     educationalQualification          String?
-    religiousEducationalQualification String?
+    religiousEducationalQualification String[]
     address                           String?
-    maritalStatus                     String?
-    specialCategory                   String?
-    religiousType                     String?
-    occupation                        String?
-    familyBackground                  String?
+    maritalStatus                     String[]
+    specialCategory                   String[]
+    religiousType                     String[]
+    occupation                        String[]
+    familyBackground                  String[]
     secondMarrige                     String?
     location                          String?
     qualities                         String?

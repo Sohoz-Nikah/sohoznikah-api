@@ -5,6 +5,7 @@ import { IBiodataFilterRequest } from './biodata.interface';
 import { IPaginationOptions } from '../../interface/iPaginationOptions';
 import { paginationHelpers } from '../../helper/paginationHelper';
 import { BiodataSearchAbleFields } from './biodata.constant';
+import { buildFilterConditions } from '../../utils/buildFilterConditions';
 
 const createABiodata = async (
   req: Record<string, any>,
@@ -33,22 +34,26 @@ const createABiodata = async (
       data: {
         createdBy: creator,
         userId: userId,
-        ...(profilePicFormData && { profilePic: profilePicFormData.photoId }),
 
         ...(firstWordsFormData && {
-          preApprovalAcceptTerms: firstWordsFormData.preApprovalAcceptTerms,
+          preApprovalAcceptTerms: firstWordsFormData?.preApprovalAcceptTerms,
           preApprovalOathTruthfulInfo:
-            firstWordsFormData.preApprovalOathTruthfulInfo,
+            firstWordsFormData?.preApprovalOathTruthfulInfo,
           preApprovalOathLegalResponsibility:
-            firstWordsFormData.preApprovalOathLegalResponsibility,
+            firstWordsFormData?.preApprovalOathLegalResponsibility,
         }),
 
         ...(finalWordsFormData && {
           postApprovalOathTruthfulInfo:
-            finalWordsFormData.postApprovalOathTruthfulInfo,
-          postApprovalOathNoMisuse: finalWordsFormData.postApprovalOathNoMisuse,
+            finalWordsFormData?.postApprovalOathTruthfulInfo,
+          postApprovalOathNoMisuse:
+            finalWordsFormData?.postApprovalOathNoMisuse,
           postApprovalOathLegalResponsibility:
-            finalWordsFormData.postApprovalOathLegalResponsibility,
+            finalWordsFormData?.postApprovalOathLegalResponsibility,
+        }),
+
+        ...(profilePicFormData && {
+          profilePic: profilePicFormData?.photoId,
         }),
       },
     });
@@ -62,13 +67,13 @@ const createABiodata = async (
       await prisma.biodataPrimaryInfo.create({
         data: {
           biodataId,
-          biodataType: primaryInfoFormData.biodataType,
-          biodataFor: primaryInfoFormData.biodataFor,
-          fullName: primaryInfoFormData.fullName,
-          fatherName: primaryInfoFormData.fatherName,
-          motherName: primaryInfoFormData.motherName,
-          email: primaryInfoFormData.email,
-          mobile: primaryInfoFormData.mobile,
+          biodataType: primaryInfoFormData?.biodataType,
+          biodataFor: primaryInfoFormData?.biodataFor,
+          fullName: primaryInfoFormData?.fullName,
+          fatherName: primaryInfoFormData?.fatherName,
+          motherName: primaryInfoFormData?.motherName,
+          email: primaryInfoFormData?.email,
+          mobile: primaryInfoFormData?.mobile,
           createdBy: creator,
         },
       });
@@ -87,13 +92,15 @@ const createABiodata = async (
       // Guardian Contacts
       if (primaryInfoFormData.guardianContacts?.length) {
         await prisma.biodataPrimaryInfoGuardianContact.createMany({
-          data: primaryInfoFormData.guardianContacts.map(contact => ({
-            biodataId,
-            relation: contact.relation,
-            name: contact.name,
-            mobile: contact.mobile,
-            createdBy: creator,
-          })),
+          data: primaryInfoFormData.guardianContacts.map(
+            (contact: { relation: string; name: string; mobile: string }) => ({
+              biodataId,
+              relation: contact.relation,
+              name: contact.name,
+              mobile: contact.mobile,
+              createdBy: creator,
+            }),
+          ),
         });
       }
     }
@@ -101,16 +108,25 @@ const createABiodata = async (
     // Address Info
     if (addressInfoFormData?.addresses?.length) {
       await prisma.biodataAddressInfo.createMany({
-        data: addressInfoFormData.addresses.map(address => ({
-          biodataId,
-          type: address.type,
-          location: address.location,
-          state: address.state,
-          city: address.city,
-          country: address.country,
-          cityzenshipStatus: address.cityzenshipStatus,
-          createdBy: creator,
-        })),
+        data: addressInfoFormData.addresses.map(
+          (address: {
+            type: string;
+            location: string;
+            state: string;
+            city: string;
+            country: string;
+            cityzenshipStatus: string;
+          }) => ({
+            biodataId,
+            type: address?.type,
+            location: address?.location,
+            state: address?.state,
+            city: address?.city,
+            country: address?.country,
+            cityzenshipStatus: address?.cityzenshipStatus,
+            createdBy: creator,
+          }),
+        ),
       });
     }
 
@@ -130,15 +146,23 @@ const createABiodata = async (
       // Degrees
       if (educationInfoFormData.degrees?.length) {
         await prisma.biodataEducationInfoDegree.createMany({
-          data: educationInfoFormData.degrees.map(degree => ({
-            biodataId,
-            degreeType: degree.degreeType,
-            name: degree.name,
-            passYear: degree.passYear,
-            group: degree.group,
-            institute: degree.institute,
-            createdBy: creator,
-          })),
+          data: educationInfoFormData.degrees.map(
+            (degree: {
+              degreeType: string;
+              name: string;
+              passYear: string;
+              group: string;
+              institute: string;
+            }) => ({
+              biodataId,
+              degreeType: degree.degreeType,
+              name: degree.name,
+              passYear: degree.passYear,
+              group: degree.group,
+              institute: degree.institute,
+              createdBy: creator,
+            }),
+          ),
         });
       }
     }
@@ -159,18 +183,33 @@ const createABiodata = async (
       await prisma.biodataFamilyInfo.create({
         data: {
           biodataId,
-          ...familyInfoFormData,
+          parentsAlive: familyInfoFormData?.parentsAlive,
+          fatherOccupation: familyInfoFormData?.fatherOccupation,
+          motherOccupation: familyInfoFormData?.motherOccupation,
+          fatherSideDetail: familyInfoFormData?.fatherSideDetail,
+          motherSideDetail: familyInfoFormData?.motherSideDetail,
+          familyType: familyInfoFormData?.familyType,
+          familyBackground: familyInfoFormData?.familyBackground,
+          livingCondition: familyInfoFormData?.livingCondition,
+          wealthDescription: familyInfoFormData?.wealthDescription,
           createdBy: creator,
         },
       });
 
       if (familyInfoFormData.siblings?.length) {
         await prisma.biodataFamilyInfoSibling.createMany({
-          data: familyInfoFormData.siblings.map(sibling => ({
-            biodataId,
-            ...sibling,
-            createdBy: creator,
-          })),
+          data: familyInfoFormData.siblings.map(
+            (sibling: {
+              type?: string;
+              occupation?: string;
+              maritalStatus?: string;
+              children?: string;
+            }) => ({
+              biodataId,
+              ...sibling,
+              createdBy: creator,
+            }),
+          ),
         });
       }
     }
@@ -219,6 +258,16 @@ const createABiodata = async (
       });
     }
 
+    // Notify admin
+    await prisma.notification.create({
+      data: {
+        type: 'NEW_BIODATA',
+        message: `A new biodata has been submitted by user ID: ${creator}`,
+        userId: creator,
+        biodataId: biodata.id,
+        isGlobal: false,
+      },
+    });
     return biodata;
   });
 
@@ -230,8 +279,10 @@ const getFilteredBiodata = async (
   options: IPaginationOptions,
 ) => {
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
-  const { searchTerm, statusId, ...filterData } = filters;
-  const andConditions = [];
+  const { searchTerm, ...filterData } = filters;
+
+  console.log(filters);
+  const andConditions: any[] = [];
 
   if (searchTerm) {
     andConditions.push({
@@ -243,46 +294,29 @@ const getFilteredBiodata = async (
       })),
     });
   }
-  if (statusId) {
-    andConditions.push({
-      statusId: {
-        equals: Number(statusId),
-      },
-    });
-  }
-  if (Object.keys(filterData).length > 0) {
-    andConditions.push({
-      AND: Object.keys(filterData).map(key => {
-        return {
-          [key]: {
-            equals: (filterData as any)[key],
-            mode: 'insensitive',
-          },
-        };
-      }),
-    });
-  }
 
-  const whereConditons: Prisma.BiodataWhereInput = {
-    AND: andConditions,
-  };
+  const filterConditions = buildFilterConditions(filterData);
+  if (Object.keys(filterConditions).length)
+    andConditions.push(filterConditions);
+
+  const whereConditions: Prisma.BiodataWhereInput =
+    andConditions.length > 0 ? { AND: andConditions } : {};
 
   const result = await prisma.biodata.findMany({
-    where: whereConditons,
+    where: whereConditions,
     skip,
     take: limit,
+    include: {
+      primaryInfos: true, // optional if you need related data in response
+    },
     orderBy:
       options.sortBy && options.sortOrder
-        ? {
-            [options.sortBy]: options.sortOrder,
-          }
-        : {
-            id: 'desc',
-          },
+        ? { [options.sortBy]: options.sortOrder }
+        : { id: 'desc' },
   });
 
   const total = await prisma.biodata.count({
-    where: whereConditons,
+    where: whereConditions,
   });
 
   return {

@@ -1,5 +1,6 @@
 export type IBiodataFilterRequest = {
   searchTerm?: string | undefined;
-  statusId?: string | undefined;
-  code?: string | undefined;
+  biodataType?: string | undefined;
+  age?: string | undefined;
+  maritalStatus?: string | undefined;
 };
