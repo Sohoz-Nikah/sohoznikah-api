@@ -3,11 +3,9 @@ import sendResponse from '../../shared/sendResponse';
 import httpStatus from 'http-status';
 import catchAsync from '../../shared/catchAsync';
 import pick from '../../shared/pick';
-import ApiError from '../../errors/ApiError';
 import { NotificationServices } from './notification.service';
 import { NotificationFilterableFields } from './notification.constant';
-import { jwtHelpers } from '../../helper/jwtHelpers';
-import config from '../../config';
+import { JwtPayload } from 'jsonwebtoken';
 
 const createANotification = catchAsync(async (req: Request, res: Response) => {
   const result = await NotificationServices.createANotification(req);
@@ -40,14 +38,7 @@ const getFilteredNotification = catchAsync(
 );
 
 const getANotification = catchAsync(async (req: Request, res: Response) => {
-  const token = req.headers.authorization as string;
-  if (!token) {
-    throw new ApiError(httpStatus.UNAUTHORIZED, 'Unauthorized Access');
-  }
-  const { userId } = jwtHelpers.verifyToken(
-    token,
-    config.jwt.access_secret as string,
-  );
+  const { userId } = req.user as JwtPayload;
   const { id } = req.params;
   const result = await NotificationServices.getANotification(id, userId);
 
@@ -60,11 +51,6 @@ const getANotification = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updateANotification = catchAsync(async (req: Request, res: Response) => {
-  const token = req.headers.authorization as string;
-  if (!token) {
-    throw new ApiError(httpStatus.UNAUTHORIZED, 'Unauthorized Access');
-  }
-
   const { id: NotificationId } = req.params;
 
   const result = await NotificationServices.updateANotification(
@@ -81,11 +67,6 @@ const updateANotification = catchAsync(async (req: Request, res: Response) => {
 });
 
 const deleteANotification = catchAsync(async (req: Request, res: Response) => {
-  const token = req.headers.authorization as string;
-  if (!token) {
-    throw new ApiError(httpStatus.UNAUTHORIZED, 'Unauthorized Access');
-  }
-
   const { id: NotificationId } = req.params;
 
   const result = await NotificationServices.deleteANotification(NotificationId);

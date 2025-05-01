@@ -3,21 +3,13 @@ import sendResponse from '../../shared/sendResponse';
 import httpStatus from 'http-status';
 import catchAsync from '../../shared/catchAsync';
 import pick from '../../shared/pick';
-import ApiError from '../../errors/ApiError';
 import { BiodataServices } from './biodata.service';
 import { BiodataFilterableFields } from './biodata.constant';
-import { jwtHelpers } from '../../helper/jwtHelpers';
-import config from '../../config';
+import { JwtPayload } from 'jsonwebtoken';
 
 const createABiodata = catchAsync(async (req: Request, res: Response) => {
-  const token = req.headers.authorization as string;
-  if (!token) {
-    throw new ApiError(httpStatus.UNAUTHORIZED, 'Unauthorized Access');
-  }
-  const { userId } = jwtHelpers.verifyToken(
-    token,
-    config.jwt.access_secret as string,
-  );
+  const { userId } = req.user as JwtPayload;
+
   const result = await BiodataServices.createABiodata(req, userId);
 
   sendResponse(res, {
@@ -55,14 +47,6 @@ const getABiodata = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updateABiodata = catchAsync(async (req: Request, res: Response) => {
-  const token = req.headers.authorization as string;
-  if (!token) {
-    throw new ApiError(httpStatus.UNAUTHORIZED, 'Unauthorized Access');
-  }
-  // const { id } = jwtHelpers.verifyToken(
-  //   token,
-  //   config.jwt.access_secret as Secret,
-  // );
   const { id: BiodataId } = req.params;
 
   const result = await BiodataServices.updateABiodata(BiodataId, req.body);
@@ -76,14 +60,6 @@ const updateABiodata = catchAsync(async (req: Request, res: Response) => {
 });
 
 const deleteABiodata = catchAsync(async (req: Request, res: Response) => {
-  const token = req.headers.authorization as string;
-  if (!token) {
-    throw new ApiError(httpStatus.UNAUTHORIZED, 'Unauthorized Access');
-  }
-  // const { id } = jwtHelpers.verifyToken(
-  //   token,
-  //   config.jwt.access_secret as Secret,
-  // );
   const { id: BiodataId } = req.params;
 
   const result = await BiodataServices.deleteABiodata(BiodataId);
