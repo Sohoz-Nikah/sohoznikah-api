@@ -6,13 +6,13 @@ interface GenerateCodeProps {
   prefix: string;
   model: keyof PrismaClient;
   padStart?: number;
-  gender?: string;
+  biodataType?: string;
 }
 
 const generateUniqueCode = async ({
   prefix,
   model,
-  gender,
+  biodataType,
 }: GenerateCodeProps): Promise<string> => {
   const prismaModel = prisma[model as keyof PrismaClient];
 
@@ -26,7 +26,7 @@ const generateUniqueCode = async ({
 
   const allCodes = await (prismaModel as any).findMany({
     where: {
-      gender,
+      biodataType,
       code: {
         startsWith: `${prefix}-`,
       },

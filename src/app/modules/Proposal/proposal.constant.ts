@@ -1,3 +1,7 @@
 export const ProposalSearchAbleFields: string[] = ['name'];
 
-export const ProposalFilterableFields: string[] = ['searchTerm'];
+export const ProposalFilterableFields: string[] = [
+  'searchTerm',
+  'type',
+  'status',
+];

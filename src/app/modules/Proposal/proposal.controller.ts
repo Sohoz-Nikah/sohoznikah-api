@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
-import sendResponse from '../../shared/sendResponse';
 import httpStatus from 'http-status';
+import { JwtPayload } from 'jsonwebtoken';
 import catchAsync from '../../shared/catchAsync';
 import pick from '../../shared/pick';
-import { ProposalServices } from './proposal.service';
+import sendResponse from '../../shared/sendResponse';
 import { ProposalFilterableFields } from './proposal.constant';
-import { JwtPayload } from 'jsonwebtoken';
+import { ProposalServices } from './proposal.service';
 
 const createAProposal = catchAsync(async (req: Request, res: Response) => {
   const result = await ProposalServices.createAProposal(
@@ -24,7 +24,11 @@ const createAProposal = catchAsync(async (req: Request, res: Response) => {
 const getFilteredProposal = catchAsync(async (req: Request, res: Response) => {
   const filters = pick(req.query, ProposalFilterableFields);
   const options = pick(req.query, ['limit', 'page', 'sortBy', 'sortOrder']);
-  const result = await ProposalServices.getFilteredProposal(filters, options);
+  const result = await ProposalServices.getFilteredProposal(
+    filters,
+    options,
+    req.user as JwtPayload,
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

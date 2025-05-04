@@ -11,22 +11,20 @@ datasource db {
  * ======================= User ===========================
  */
 model User {
-    id                     String       @id @default(uuid())
-    code                   String       @unique
+    id                     String    @id @default(uuid())
     name                   String
-    email                  String       @unique
-    emailConfirmed         Boolean      @default(false)
-    phoneNumber            String       @unique @db.VarChar(15)
+    email                  String    @unique
+    emailConfirmed         Boolean   @default(false)
+    phoneNumber            String    @unique @db.VarChar(15)
     passwordHash           String
-    gender                 GenderOption
     passwordChangedAt      DateTime?
     refreshToken           String?
     refreshTokenExpiryTime DateTime?
-    lockoutEnabled         Boolean      @default(false)
+    lockoutEnabled         Boolean   @default(false)
     lockoutEnd             DateTime?
-    failedAccessCount      Int          @default(0)
+    failedAccessCount      Int       @default(0)
     createdBy              String?
-    createdAt              DateTime     @default(now())
+    createdAt              DateTime  @default(now())
     updatedBy              String?
     updatedAt              DateTime?
 
@@ -87,17 +85,13 @@ enum UserStatus {
     BLOCKED
 }
 
-enum GenderOption {
-    MALE
-    FEMALE
-    OTHER
-}
-
 /**
  * =======================  Biodata  ==========================
  */
 model Biodata {
     id                                  String           @id @default(uuid())
+    code                                String           @unique
+    biodataType                         BioDataType
     userId                              String           @unique
     preApprovalAcceptTerms              Boolean          @default(false)
     preApprovalOathTruthfulInfo         Boolean          @default(false)
@@ -147,6 +141,11 @@ enum VisibilityStatus {
     PRIVATE
 }
 
+enum BioDataType {
+    GROOM
+    BRIDE
+}
+
 enum BiodataStatus {
     PENDING
     APPROVED
@@ -156,9 +155,9 @@ enum BiodataStatus {
 }
 
 model BiodataPrimaryInfo {
-    id          String    @id @default(uuid())
+    id          String      @id @default(uuid())
     biodataId   String
-    biodataType String
+    biodataType BioDataType
     biodataFor  String
     fullName    String
     fatherName  String
@@ -166,7 +165,7 @@ model BiodataPrimaryInfo {
     email       String
     mobile      String
     createdBy   String?
-    createdAt   DateTime  @default(now())
+    createdAt   DateTime    @default(now())
     updatedBy   String?
     updatedAt   DateTime?
 
@@ -456,6 +455,8 @@ model Proposal {
     createdAt   DateTime       @default(now())
     respondedAt DateTime?
     isDeleted   Boolean        @default(false)
+    tokenSpent  Boolean        @default(true)
+    expiredAt   DateTime // ⏰ For 72 hour limit
 
     sender   User    @relation("SentProposals", fields: [senderId], references: [id])
     receiver User    @relation("ReceivedProposals", fields: [receiverId], references: [id])
@@ -466,6 +467,7 @@ enum ProposalStatus {
     PENDING
     ACCEPTED
     REJECTED
+    NEED_TIME
     TOKEN_WITHDRAWN
 }
 

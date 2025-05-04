@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import config from '../config';
-import prisma from '../shared/prisma';
 import { hashedPassword } from '../helper/hashPasswordHelper';
+import prisma from '../shared/prisma';
 
 const seedSuperAdmin = async () => {
   try {
@@ -11,13 +11,11 @@ const seedSuperAdmin = async () => {
     );
 
     const superUser = {
-      code: 'SA-1',
       name: config.super_admin.name as string,
       email: config.super_admin.email as string,
       emailConfirmed: true,
       phoneNumber: config.super_admin.phoneNumber as string,
       passwordHash: newPass,
-      gender: 'MALE' as const,
       role: 'SUPER_ADMIN' as const,
       status: 'ACTIVE' as const,
       isDeleted: false,

@@ -1,13 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const relationFieldMap: Record<string, { relation: string; field: string }> = {
-  biodataType: {
-    relation: 'primaryInfos',
-    field: 'biodataType',
-  },
-  // add more as needed
-};
 
-export const buildFilterConditions = (filterData: Record<string, any>) => {
+export const buildFilterConditions = (
+  filterData: Record<string, any>,
+  relationFieldMap: Record<string, any>,
+) => {
   const directConditions: any[] = [];
   const relationConditions: Record<string, any[]> = {};
 

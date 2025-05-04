@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
-import sendResponse from '../../shared/sendResponse';
 import httpStatus from 'http-status';
+import { JwtPayload } from 'jsonwebtoken';
 import catchAsync from '../../shared/catchAsync';
 import pick from '../../shared/pick';
-import { BiodataServices } from './biodata.service';
+import sendResponse from '../../shared/sendResponse';
 import { BiodataFilterableFields } from './biodata.constant';
-import { JwtPayload } from 'jsonwebtoken';
+import { BiodataServices } from './biodata.service';
 
 const createABiodata = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user as JwtPayload;
@@ -47,9 +47,14 @@ const getABiodata = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updateABiodata = catchAsync(async (req: Request, res: Response) => {
-  const { id: BiodataId } = req.params;
+  const { id: biodataId } = req.params;
+  const { userId } = req.user as JwtPayload;
 
-  const result = await BiodataServices.updateABiodata(BiodataId, req.body);
+  const result = await BiodataServices.updateABiodata(
+    biodataId,
+    req.body,
+    userId,
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

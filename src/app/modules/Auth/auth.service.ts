@@ -1,15 +1,16 @@
+import { User, UserRole, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
-import prisma from '../../shared/prisma';
-import httpStatus from 'http-status';
-import { jwtHelpers } from '../../helper/jwtHelpers';
-import config from '../../config';
-import { JwtPayload } from 'jsonwebtoken';
-import ApiError from '../../errors/ApiError';
-import { Request } from 'express';
-import { hashedPassword } from '../../helper/hashPasswordHelper';
-import { GenderOption, User, UserRole, UserStatus } from '@prisma/client';
 import crypto from 'crypto';
+import { Request } from 'express';
+import httpStatus from 'http-status';
+import { JwtPayload } from 'jsonwebtoken';
+import config from '../../config';
+import ApiError from '../../errors/ApiError';
+import { exclude } from '../../helper/exclude';
+import { hashedPassword } from '../../helper/hashPasswordHelper';
+import { jwtHelpers } from '../../helper/jwtHelpers';
 import { sendEmail } from '../../helper/sendEmail';
+import prisma from '../../shared/prisma';
 import {
   IChangePassword,
   ILoginUser,
@@ -17,8 +18,6 @@ import {
   IRefreshTokenResponse,
 } from './auth.interface';
 import { AuthUtils } from './auth.utils';
-import { exclude } from '../../helper/exclude';
-import generateUniqueCode from '../../utils/generateUniqueCode';
 
 const register = async (req: Request): Promise<Partial<User>> => {
   const { name, email, phoneNumber, gender, password } = req.body;
@@ -30,26 +29,7 @@ const register = async (req: Request): Promise<Partial<User>> => {
   if (user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User already exists');
   }
-  let generatedId;
-  if (gender === GenderOption.MALE) {
-    generatedId = await generateUniqueCode({
-      prefix: 'M',
-      model: 'user',
-      gender: GenderOption.MALE,
-    });
-  } else if (gender === GenderOption.FEMALE) {
-    generatedId = await generateUniqueCode({
-      prefix: 'F',
-      model: 'user',
-      gender: GenderOption.FEMALE,
-    });
-  } else {
-    generatedId = await generateUniqueCode({
-      prefix: 'O',
-      model: 'user',
-      gender: GenderOption.OTHER,
-    });
-  }
+
   // Hash the password
   const hashedPassword: string = await bcrypt.hash(
     password,
@@ -63,7 +43,6 @@ const register = async (req: Request): Promise<Partial<User>> => {
   // Save user details along with OTP and its expiry in the database
   const result = await prisma.user.create({
     data: {
-      code: generatedId,
       name: name,
       email: email,
       gender: gender,
