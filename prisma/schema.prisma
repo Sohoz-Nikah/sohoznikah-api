@@ -18,6 +18,7 @@ model User {
     phoneNumber            String    @unique @db.VarChar(15)
     passwordHash           String
     passwordChangedAt      DateTime?
+    accountType            String?
     refreshToken           String?
     refreshTokenExpiryTime DateTime?
     lockoutEnabled         Boolean   @default(false)
@@ -71,6 +72,11 @@ model User {
     gurdianContactCreated       BiodataPrimaryInfoGuardianContact[] @relation("GuardianContactInfoCreatedBy")
     gurdianContactUpdated       BiodataPrimaryInfoGuardianContact[] @relation("GuardianContactInfoUpdatedBy")
     Notification                Notification[]
+
+    @@index([email])
+    @@index([phoneNumber])
+    @@index([role])
+    @@index([status])
 }
 
 enum UserRole {
@@ -134,6 +140,7 @@ model Biodata {
     proposal                    Proposal[]
     contactAccess               ContactAccess[]
     biodataChangeLog            BiodataChangeLog[]
+    Notification                Notification[]
 }
 
 enum VisibilityStatus {
@@ -458,9 +465,10 @@ model Proposal {
     tokenSpent  Boolean        @default(true)
     expiredAt   DateTime // ⏰ For 72 hour limit
 
-    sender   User    @relation("SentProposals", fields: [senderId], references: [id])
-    receiver User    @relation("ReceivedProposals", fields: [receiverId], references: [id])
-    biodata  Biodata @relation(fields: [biodataId], references: [id])
+    sender       User           @relation("SentProposals", fields: [senderId], references: [id])
+    receiver     User           @relation("ReceivedProposals", fields: [receiverId], references: [id])
+    biodata      Biodata        @relation(fields: [biodataId], references: [id])
+    Notification Notification[]
 }
 
 enum ProposalStatus {
@@ -492,16 +500,19 @@ model ContactAccess {
  */
 
 model Notification {
-    id        String   @id @default(uuid())
-    type      String // e.g., "BIODATA_UPDATE", "NEW_BIODATA"
-    message   String
-    userId    String // who triggered it
-    biodataId String?
-    isGlobal  Boolean  @default(false)
-    isRead    Boolean  @default(false)
-    createdAt DateTime @default(now())
+    id         String   @id @default(uuid())
+    type       String // e.g., "BIODATA_UPDATE", "NEW_BIODATA"
+    message    String
+    userId     String
+    biodataId  String?
+    proposalId String?
+    isGlobal   Boolean  @default(false)
+    isRead     Boolean  @default(false)
+    createdAt  DateTime @default(now())
 
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    biodata  Biodata?  @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+    proposal Proposal? @relation(fields: [proposalId], references: [id], onDelete: Cascade)
 }
 
 /**

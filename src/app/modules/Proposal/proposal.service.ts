@@ -51,16 +51,13 @@ const createAProposal = async (
     throw new ApiError(httpStatus.CONFLICT, 'You have already sent a proposal');
   }
 
-  // Deduct 1 token from sender before proposal creation
-  const tokenCheck = await prisma.user.findUnique({ where: { id: userId } });
-
-  if (!tokenCheck || tokenCheck.tokens < 1) {
+  if (existingUser.token < 1) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Not enough tokens');
   }
 
   await prisma.user.update({
     where: { id: userId },
-    data: { tokens: { decrement: 1 } },
+    data: { token: { decrement: 1 } },
   });
 
   // Create Proposal
@@ -69,7 +66,23 @@ const createAProposal = async (
       biodataId,
       senderId: userId,
       receiverId: existingBiodata.userId,
-      expireAt: addHours(new Date(), 72),
+      expiredAt: addHours(new Date(), 72),
+    },
+  });
+
+  if (!newProposal) {
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'Failed to create proposal',
+    );
+  }
+  // Optional: Log update
+  await prisma.notification.create({
+    data: {
+      type: 'Got New Proposal',
+      message: `You have got new proposal from : ${updater}`,
+      userId: existingBiodata.userId,
+      proposalId: newProposal.id,
     },
   });
 
@@ -85,7 +98,7 @@ const getFilteredProposal = async (
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
   const { searchTerm, type, status, ...filterData } = filters;
   const andConditions: Prisma.ProposalBiodataWhereInput[] = [];
-
+  console.log(filters, options, userId, role);
   // Search term
   if (searchTerm) {
     andConditions.push({
@@ -131,11 +144,11 @@ const getFilteredProposal = async (
     });
   }
 
-  const whereConditions: Prisma.ProposalBiodataWhereInput = {
+  const whereConditions: Prisma.ProposalWhereInput = {
     AND: andConditions,
   };
 
-  const result = await prisma.proposalBiodata.findMany({
+  const result = await prisma.proposal.findMany({
     where: whereConditions,
     skip,
     take: limit,
@@ -149,7 +162,7 @@ const getFilteredProposal = async (
           },
   });
 
-  const total = await prisma.proposalBiodata.count({
+  const total = await prisma.proposal.count({
     where: whereConditions,
   });
 
@@ -163,22 +176,37 @@ const getFilteredProposal = async (
   };
 };
 
-const getAProposal = async (ProposalId: string) => {
-  const result = await prisma.ProposalBiodata.findUniqueOrThrow({
-    where: {
-      id: ProposalId,
-    },
-  });
+const getAProposal = async (ProposalId: string, user: JwtPayload) => {
+  const { userId, role } = user;
+  let result: Proposal | null = null;
+  if (role === 'USER') {
+    result = await prisma.proposal.findFirst({
+      where: {
+        id: ProposalId,
+        OR: [{ senderId: userId }, { receiverId: userId }],
+      },
+    });
+  } else {
+    result = await prisma.proposal.findUnique({
+      where: { id: ProposalId },
+    });
+  }
+
+  if (!result) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Proposal not found');
+  }
 
   return result;
 };
 
 const updateProposalResponse = async (
   proposalId: string,
-  response: 'ACCEPTED' | 'REJECTED' | 'NEED_TIME',
+  payload: Record<string, any>,
+  user: JwtPayload,
 ) => {
+  const { userId } = user;
   const proposal = await prisma.proposal.findUnique({
-    where: { id: proposalId },
+    where: { id: proposalId, receiverId: userId },
   });
 
   if (!proposal) throw new ApiError(httpStatus.NOT_FOUND, 'Proposal not found');

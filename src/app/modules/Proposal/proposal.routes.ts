@@ -9,7 +9,7 @@ const router = express.Router();
 
 router.post(
   '/',
-  auth([UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.USER]),
+  auth([UserRole.USER]),
   validateRequest(ProposalValidation.createProposalValidationSchema),
   ProposalControllers.createAProposal,
 );
@@ -24,6 +24,12 @@ router.get(
   '/:id',
   auth([UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.USER]),
   ProposalControllers.getAProposal,
+);
+
+router.patch(
+  '/:id',
+  auth([UserRole.USER]),
+  ProposalControllers.updateProposalResponse,
 );
 
 router.delete(
