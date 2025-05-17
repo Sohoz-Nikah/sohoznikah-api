@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Prisma, ProposalBiodata } from '@prisma/client';
+import { Prisma, Proposal } from '@prisma/client';
 import { addHours } from 'date-fns';
 import httpStatus from 'http-status';
 import { JwtPayload } from 'jsonwebtoken';
@@ -80,7 +80,7 @@ const createAProposal = async (
   await prisma.notification.create({
     data: {
       type: 'Got New Proposal',
-      message: `You have got new proposal from : ${updater}`,
+      message: `You have got new proposal from : ${existingUser.name}`,
       userId: existingBiodata.userId,
       proposalId: newProposal.id,
     },
@@ -97,7 +97,7 @@ const getFilteredProposal = async (
   const { userId, role } = user;
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
   const { searchTerm, type, status, ...filterData } = filters;
-  const andConditions: Prisma.ProposalBiodataWhereInput[] = [];
+  const andConditions: Prisma.ProposalWhereInput[] = [];
   console.log(filters, options, userId, role);
   // Search term
   if (searchTerm) {
@@ -112,11 +112,11 @@ const getFilteredProposal = async (
   }
 
   // Filter by status
-  if (status) {
-    andConditions.push({
-      status: status,
-    });
-  }
+  // if (status) {
+  //   andConditions.push({
+  //     status: status,
+  //   });
+  // }
 
   // Role-based access filtering
   if (role === 'USER') {
@@ -199,47 +199,45 @@ const getAProposal = async (ProposalId: string, user: JwtPayload) => {
   return result;
 };
 
-const updateProposalResponse = async (
-  proposalId: string,
-  payload: Record<string, any>,
-  user: JwtPayload,
-) => {
-  const { userId } = user;
-  const proposal = await prisma.proposal.findUnique({
-    where: { id: proposalId, receiverId: userId },
-  });
+// const updateProposalResponse = async (
+//   proposalId: string,
+//   payload: Record<string, any>,
+//   user: JwtPayload,
+// ) => {
+//   const { userId } = user;
+//   const proposal = await prisma.proposal.findUnique({
+//     where: { id: proposalId, receiverId: userId },
+//   });
 
-  if (!proposal) throw new ApiError(httpStatus.NOT_FOUND, 'Proposal not found');
+//   if (!proposal) throw new ApiError(httpStatus.NOT_FOUND, 'Proposal not found');
 
-  if (response === 'NEED_TIME') {
-    return prisma.proposal.update({
-      where: { id: proposalId },
-      data: {
-        status: 'NEED_TIME',
-        expireAt: addHours(new Date(), 72),
-      },
-    });
-  }
+//   if (response === 'NEED_TIME') {
+//     return prisma.proposal.update({
+//       where: { id: proposalId },
+//       data: {
+//         status: 'NEED_TIME',
+//         expireAt: addHours(new Date(), 72),
+//       },
+//     });
+//   }
 
-  return prisma.proposal.update({
-    where: { id: proposalId },
-    data: {
-      status: response,
-      respondedAt: new Date(),
-    },
-  });
-};
+//   return prisma.proposal.update({
+//     where: { id: proposalId },
+//     data: {
+//       status: response,
+//       respondedAt: new Date(),
+//     },
+//   });
+// };
 
-const deleteAProposal = async (
-  ProposalId: string,
-): Promise<ProposalBiodata> => {
-  await prisma.ProposalBiodata.findFirstOrThrow({
+const deleteAProposal = async (ProposalId: string): Promise<Proposal> => {
+  await prisma.proposal.findFirstOrThrow({
     where: {
       id: ProposalId,
     },
   });
 
-  const result = await prisma.ProposalBiodata.delete({
+  const result = await prisma.proposal.delete({
     where: {
       id: ProposalId,
     },
@@ -252,6 +250,6 @@ export const ProposalServices = {
   createAProposal,
   getFilteredProposal,
   getAProposal,
-  updateProposalResponse,
+  // updateProposalResponse,
   deleteAProposal,
 };

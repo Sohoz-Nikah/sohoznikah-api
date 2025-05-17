@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import prisma from '../../shared/prisma';
-import { IPaginationOptions } from '../../interface/iPaginationOptions';
-import { UserSearchAbleFields } from './user.constant';
 import { Prisma, User, UserRole } from '@prisma/client';
-import ApiError from '../../errors/ApiError';
 import httpStatus from 'http-status';
-import { paginationHelpers } from '../../helper/paginationHelper';
 import config from '../../config';
+import ApiError from '../../errors/ApiError';
 import { exclude } from '../../helper/exclude';
+import { paginationHelpers } from '../../helper/paginationHelper';
+import { IPaginationOptions } from '../../interface/iPaginationOptions';
+import prisma from '../../shared/prisma';
+import { UserSearchAbleFields } from './user.constant';
 import { IUserFilterRequest } from './user.interface';
 
 const getAllUsers = async (
@@ -63,7 +63,7 @@ const getAllUsers = async (
 
   // Exclude sensitive fields
   const safeUsers = users.map(user =>
-    exclude(user, ['password', 'otp', 'otpExpiry', 'passwordChangedAt']),
+    exclude(user, ['passwordHash', 'otp', 'otpExpiry', 'passwordChangedAt']),
   );
 
   const total = await prisma.user.count({
@@ -83,7 +83,7 @@ const getAllUsers = async (
 const getSingleUser = async (id: string): Promise<Partial<User>> => {
   const user = await prisma.user.findUnique({
     where: {
-      id: Number(id),
+      id: id,
     },
   });
 
@@ -92,7 +92,7 @@ const getSingleUser = async (id: string): Promise<Partial<User>> => {
   }
 
   const safeUser = exclude(user, [
-    'password',
+    'passwordHash',
     'otp',
     'otpExpiry',
     'passwordChangedAt',
@@ -104,12 +104,12 @@ const getSingleUser = async (id: string): Promise<Partial<User>> => {
 const getMyProfile = async (userId: string): Promise<Partial<User>> => {
   const user = await prisma.user.findUniqueOrThrow({
     where: {
-      id: Number(userId),
+      id: userId,
     },
   });
 
   const safeUser = exclude(user, [
-    'password',
+    'passwordHash',
     'otp',
     'otpExpiry',
     'passwordChangedAt',
@@ -124,26 +124,24 @@ const updateMyProfile = async (
 ): Promise<Partial<User>> => {
   const user = await prisma.user.findUniqueOrThrow({
     where: {
-      id: Number(userId),
+      id: userId,
     },
   });
 
   const result = await prisma.user.update({
     where: {
-      id: Number(userId),
+      id: userId,
       role: user.role,
     },
     data: {
       name: data.name,
       email: data.email,
-      contactNumber: data.contactNumber,
-      image: data.image,
-      address: data.address,
+      phoneNumber: data.phoneNumber,
     },
   });
 
   const safeUser = exclude(result, [
-    'password',
+    'passwordHash',
     'otp',
     'otpExpiry',
     'passwordChangedAt',
@@ -159,18 +157,18 @@ const updateUser = async (
 ) => {
   const updateBy = await prisma.user.findUniqueOrThrow({
     where: {
-      id: Number(userId),
+      id: userId,
     },
   });
 
   const updatedUser = await prisma.user.findUniqueOrThrow({
     where: {
-      id: Number(updateUserId),
+      id: updateUserId,
     },
   });
 
   if (
-    updateBy.role === UserRole.OWNER &&
+    updateBy.role === UserRole.SUPER_ADMIN &&
     updatedUser.role === UserRole.SUPER_ADMIN
   ) {
     throw new ApiError(
@@ -180,22 +178,20 @@ const updateUser = async (
   }
   const result = await prisma.user.update({
     where: {
-      id: Number(updateUserId),
+      id: updateUserId,
     },
     data: {
       name: data.name,
       email: data.email,
-      contactNumber: data.contactNumber,
-      image: data.image,
+      phoneNumber: data.phoneNumber,
       role: data.role,
       status: data.status,
       isDeleted: data.isDeleted,
-      address: data.address,
     },
   });
 
   const safeUser = exclude(result, [
-    'password',
+    'passwordHash',
     'otp',
     'otpExpiry',
     'passwordChangedAt',
@@ -207,12 +203,12 @@ const updateUser = async (
 const deleteUser = async (id: string, userId: string) => {
   const user = await prisma.user.findUniqueOrThrow({
     where: {
-      id: Number(id),
+      id: id,
     },
   });
   const deletedBy = await prisma.user.findUniqueOrThrow({
     where: {
-      id: Number(userId),
+      id: userId,
     },
   });
 
@@ -220,7 +216,10 @@ const deleteUser = async (id: string, userId: string) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
 
-  if (deletedBy.role === UserRole.OWNER && user.role === UserRole.SUPER_ADMIN) {
+  if (
+    deletedBy.role === UserRole.SUPER_ADMIN &&
+    user.role === UserRole.SUPER_ADMIN
+  ) {
     throw new ApiError(
       httpStatus.FORBIDDEN,
       'You are not authorized to delete this user!',
@@ -232,7 +231,7 @@ const deleteUser = async (id: string, userId: string) => {
 
   const deleteUser = await prisma.user.update({
     where: {
-      id: Number(id),
+      id: id,
     },
     data: {
       isDeleted: true,
@@ -245,12 +244,12 @@ const deleteUser = async (id: string, userId: string) => {
 const analytics = async () => {
   const totalAdmins = await prisma.user.count({
     where: {
-      role: UserRole.OWNER,
+      role: UserRole.SUPER_ADMIN,
     },
   });
   const totalManager = await prisma.user.count({
     where: {
-      role: UserRole.MANAGER,
+      role: UserRole.ADMIN,
     },
   });
 

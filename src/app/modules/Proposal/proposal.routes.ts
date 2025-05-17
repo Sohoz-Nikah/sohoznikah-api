@@ -26,11 +26,11 @@ router.get(
   ProposalControllers.getAProposal,
 );
 
-router.patch(
-  '/:id',
-  auth([UserRole.USER]),
-  ProposalControllers.updateProposalResponse,
-);
+// router.patch(
+//   '/:id',
+//   auth([UserRole.USER]),
+//   ProposalControllers.updateProposalResponse,
+// );
 
 router.delete(
   '/:id',

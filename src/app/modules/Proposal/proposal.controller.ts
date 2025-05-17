@@ -54,23 +54,23 @@ const getAProposal = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const updateProposalResponse = catchAsync(
-  async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const result = await ProposalServices.getAProposal(
-      id,
-      req.body,
-      req.user as JwtPayload,
-    );
+// const updateProposalResponse = catchAsync(
+//   async (req: Request, res: Response) => {
+//     const { id } = req.params;
+//     const result = await ProposalServices.getAProposal(
+//       id,
+//       req.body,
+//       req.user as JwtPayload,
+//     );
 
-    sendResponse(res, {
-      statusCode: httpStatus.OK,
-      success: true,
-      message: 'Proposal retrieved successfully',
-      data: result,
-    });
-  },
-);
+//     sendResponse(res, {
+//       statusCode: httpStatus.OK,
+//       success: true,
+//       message: 'Proposal retrieved successfully',
+//       data: result,
+//     });
+//   },
+// );
 
 const deleteAProposal = catchAsync(async (req: Request, res: Response) => {
   const { id: ProposalId } = req.params;
@@ -91,6 +91,6 @@ export const ProposalControllers = {
   createAProposal,
   getFilteredProposal,
   getAProposal,
-  updateProposalResponse,
+  // updateProposalResponse,
   deleteAProposal,
 };
