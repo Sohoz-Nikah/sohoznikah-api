@@ -20,10 +20,13 @@ import {
 import { AuthUtils } from './auth.utils';
 
 const register = async (req: Request): Promise<Partial<User>> => {
-  const { name, email, phoneNumber, gender, password } = req.body;
+  const { name, email, phoneNumber, accountType, password } = req.body;
   // Check if the user already exists
   const user = await prisma.user.findUnique({
-    where: { email: email },
+    where: {
+      email: email,
+      phoneNumber: phoneNumber,
+    },
   });
 
   if (user) {
@@ -45,9 +48,9 @@ const register = async (req: Request): Promise<Partial<User>> => {
     data: {
       name: name,
       email: email,
-      gender: gender,
       phoneNumber: phoneNumber,
       passwordHash: hashedPassword,
+      accountType: accountType,
       otp: otp,
       otpExpiry: otpExpiry,
     },
@@ -119,7 +122,7 @@ const verifyOtp = async (payload: Partial<User>) => {
 
   // Check OTP validity and expiration
   if (user.otp !== otp || new Date() > user.otpExpiry) {
-    throw new ApiError(httpStatus.UNAUTHORIZED, 'Invalid or expired OTP');
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid or expired OTP');
   }
 
   // Activate user and clear OTP fields
@@ -169,7 +172,7 @@ const loginUser = async (payload: ILoginUser): Promise<ILoginUserResponse> => {
     isUserExist.passwordHash &&
     !(await AuthUtils.comparePasswords(password, isUserExist.passwordHash))
   ) {
-    throw new ApiError(httpStatus.UNAUTHORIZED, 'Password is incorrect');
+    throw new ApiError(httpStatus.NOT_FOUND, 'Password is incorrect');
   }
 
   const { id: userId, role } = isUserExist;

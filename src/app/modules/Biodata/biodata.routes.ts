@@ -18,13 +18,26 @@ router.post(
 
 router.get('/', BiodataControllers.getFilteredBiodata);
 
+router.get(
+  '/my-biodata',
+  auth([UserRole.USER]),
+  BiodataControllers.getMyBiodata,
+);
+
+router.patch(
+  '/my-biodata',
+  auth([UserRole.USER]),
+  validateRequest(updateBiodataValidationSchema),
+  BiodataControllers.updateMyBiodata,
+);
+
 router.get('/:id', BiodataControllers.getABiodata);
 
 router.patch(
   '/:id',
   auth([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
   validateRequest(updateBiodataValidationSchema),
-  BiodataControllers.updateABiodata,
+  BiodataControllers.updateBiodataByAdmin,
 );
 
 router.delete(

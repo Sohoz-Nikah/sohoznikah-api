@@ -1,10 +1,13 @@
-export const BiodataSearchAbleFields: string[] = ['name'];
+export const BiodataSearchAbleFields: string[] = ['name', 'code'];
 
 export const BiodataFilterableFields: string[] = [
   'searchTerm',
   'biodataType',
   'age',
   'maritalStatus',
+  'code',
+  'status',
+  'visibility',
 ];
 
 export const relationFieldMap: Record<

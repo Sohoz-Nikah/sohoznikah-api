@@ -6,22 +6,74 @@ import {
   Prisma,
   VisibilityStatus,
 } from '@prisma/client';
+import httpStatus from 'http-status';
+import ApiError from '../../errors/ApiError';
 import { paginationHelpers } from '../../helper/paginationHelper';
 import { IPaginationOptions } from '../../interface/iPaginationOptions';
 import prisma from '../../shared/prisma';
 import { buildFilterConditions } from '../../utils/buildFilterConditions';
 import generateUniqueCode from '../../utils/generateUniqueCode';
 import { BiodataSearchAbleFields, relationFieldMap } from './biodata.constant';
-import { IBiodataFilterRequest } from './biodata.interface';
+import { BiodataFormData, IBiodataFilterRequest } from './biodata.interface';
 
-const createABiodata = async (
-  req: Record<string, any>,
-  creator: string,
-): Promise<Biodata> => {
+// Helper function to handle biodata creation/update
+async function handleBiodataOperation(
+  biodataId: string | null,
+  formData: BiodataFormData,
+  userId: string,
+  isAdmin: boolean = false,
+): Promise<Biodata> {
+  return await prisma.$transaction(async tx => {
+    let biodata: Biodata;
+
+    if (!biodataId) {
+      biodata = await tx.biodata.create({
+        data: {
+          createdBy: userId,
+          createdAt: new Date(),
+          userId,
+        },
+      });
+    } else {
+      biodata = await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          updatedBy: userId,
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    // Handle related records
+    await handleRelatedRecords(tx, biodata.id, formData, userId);
+
+    // Create notification
+    await tx.notification.create({
+      data: {
+        type: biodataId ? 'UPDATE_BIODATA' : 'NEW_BIODATA',
+        message: `Biodata ${biodataId ? 'updated' : 'created'} by user ID: ${userId}`,
+        userId,
+        biodataId: biodata.id,
+        isGlobal: false,
+      },
+    });
+
+    return biodata;
+  });
+}
+
+// Helper function to handle related records with minimal database calls
+async function handleRelatedRecords(
+  tx: Prisma.TransactionClient,
+  biodataId: string,
+  formData: BiodataFormData,
+  userId: string,
+) {
   const {
-    userId,
     firstWordsFormData,
     primaryInfoFormData,
+    profilePicFormData,
+    finalWordsFormData,
     generalInfoFormData,
     addressInfoFormData,
     educationInfoFormData,
@@ -31,272 +83,490 @@ const createABiodata = async (
     personalInfoFormData,
     marriageInfoFormData,
     spousePreferenceInfoFormData,
+  } = formData;
+  const { guardianContacts } = primaryInfoFormData || {};
+
+  console.log({
+    firstWordsFormData,
+    primaryInfoFormData,
+    guardianContacts,
     profilePicFormData,
     finalWordsFormData,
-  } = req.body;
+    generalInfoFormData,
+    addressInfoFormData,
+    educationInfoFormData,
+    occupationInfoFormData,
+    familyInfoFormData,
+    religiousInfoFormData,
+    personalInfoFormData,
+    marriageInfoFormData,
+    spousePreferenceInfoFormData,
+  });
 
-  const result = await prisma.$transaction(async prisma => {
+  // Update biodata-level fields
+  if (firstWordsFormData) {
+    await tx.biodata.update({
+      where: { id: biodataId },
+      data: { ...firstWordsFormData },
+    });
+  }
+
+  if (profilePicFormData) {
+    await tx.biodata.update({
+      where: { id: biodataId },
+      data: { profilePic: profilePicFormData.photoId },
+    });
+  }
+
+  if (finalWordsFormData) {
+    await tx.biodata.update({
+      where: { id: biodataId },
+      data: { ...finalWordsFormData },
+    });
+  }
+
+  // Handle Primary Info (Single Record)
+  if (primaryInfoFormData) {
     let generatedId;
-    if (primaryInfoFormData?.biodataType === BioDataType.GROOM) {
+    if (primaryInfoFormData.biodataType === BioDataType.GROOM) {
       generatedId = await generateUniqueCode({
         prefix: 'M',
         model: 'biodata',
         biodataType: BioDataType.GROOM,
       });
-    } else if (primaryInfoFormData?.biodataType === BioDataType.BRIDE) {
+    } else if (primaryInfoFormData.biodataType === BioDataType.BRIDE) {
       generatedId = await generateUniqueCode({
         prefix: 'F',
         model: 'biodata',
         biodataType: BioDataType.BRIDE,
       });
     }
-
-    // Step 1: Create Biodata
-    const biodata = await prisma.biodata.create({
+    await tx.biodata.update({
+      where: { id: biodataId },
       data: {
-        createdBy: creator,
         code: generatedId,
-        biodataType: primaryInfoFormData?.biodataType,
-
-        userId: userId,
-
-        ...(firstWordsFormData && {
-          preApprovalAcceptTerms: firstWordsFormData?.preApprovalAcceptTerms,
-          preApprovalOathTruthfulInfo:
-            firstWordsFormData?.preApprovalOathTruthfulInfo,
-          preApprovalOathLegalResponsibility:
-            firstWordsFormData?.preApprovalOathLegalResponsibility,
-        }),
-
-        ...(finalWordsFormData && {
-          postApprovalOathTruthfulInfo:
-            finalWordsFormData?.postApprovalOathTruthfulInfo,
-          postApprovalOathNoMisuse:
-            finalWordsFormData?.postApprovalOathNoMisuse,
-          postApprovalOathLegalResponsibility:
-            finalWordsFormData?.postApprovalOathLegalResponsibility,
-        }),
-
-        ...(profilePicFormData && {
-          profilePic: profilePicFormData?.photoId,
-        }),
+        biodataType: primaryInfoFormData.biodataType,
       },
     });
 
-    const biodataId = biodata.id;
-
-    // Step 2: Create related models
-
-    // Primary Info
-    if (primaryInfoFormData) {
-      await prisma.biodataPrimaryInfo.create({
-        data: {
-          biodataId,
-          biodataType: primaryInfoFormData?.biodataType,
-          biodataFor: primaryInfoFormData?.biodataFor,
-          fullName: primaryInfoFormData?.fullName,
-          fatherName: primaryInfoFormData?.fatherName,
-          motherName: primaryInfoFormData?.motherName,
-          email: primaryInfoFormData?.email,
-          mobile: primaryInfoFormData?.mobile,
-          createdBy: creator,
-        },
-      });
-
-      // General Info
-      if (generalInfoFormData) {
-        await prisma.biodataGeneralInfo.create({
-          data: {
-            biodataId,
-            ...generalInfoFormData,
-            createdBy: creator,
-          },
-        });
-      }
-
-      // Guardian Contacts
-      if (primaryInfoFormData.guardianContacts?.length) {
-        await prisma.biodataPrimaryInfoGuardianContact.createMany({
-          data: primaryInfoFormData.guardianContacts.map(
-            (contact: { relation: string; name: string; mobile: string }) => ({
-              biodataId,
-              relation: contact.relation,
-              name: contact.name,
-              mobile: contact.mobile,
-              createdBy: creator,
-            }),
-          ),
-        });
-      }
-    }
-
-    // Address Info
-    if (addressInfoFormData?.addresses?.length) {
-      await prisma.biodataAddressInfo.createMany({
-        data: addressInfoFormData.addresses.map(
-          (address: {
-            type: string;
-            location: string;
-            state: string;
-            city: string;
-            country: string;
-            cityzenshipStatus: string;
-          }) => ({
-            biodataId,
-            type: address?.type,
-            location: address?.location,
-            state: address?.state,
-            city: address?.city,
-            country: address?.country,
-            cityzenshipStatus: address?.cityzenshipStatus,
-            createdBy: creator,
-          }),
-        ),
-      });
-    }
-
-    // Education Info
-    if (educationInfoFormData) {
-      await prisma.biodataEducationInfo.create({
-        data: {
-          biodataId,
-          type: educationInfoFormData.type,
-          highestDegree: educationInfoFormData.highestDegree,
-          religiousEducation: educationInfoFormData.religiousEducation,
-          detail: educationInfoFormData.details,
-          createdBy: creator,
-        },
-      });
-
-      // Degrees
-      if (educationInfoFormData.degrees?.length) {
-        await prisma.biodataEducationInfoDegree.createMany({
-          data: educationInfoFormData.degrees.map(
-            (degree: {
-              degreeType: string;
-              name: string;
-              passYear: string;
-              group: string;
-              institute: string;
-            }) => ({
-              biodataId,
-              degreeType: degree.degreeType,
-              name: degree.name,
-              passYear: degree.passYear,
-              group: degree.group,
-              institute: degree.institute,
-              createdBy: creator,
-            }),
-          ),
-        });
-      }
-    }
-
-    // Occupation Info
-    if (occupationInfoFormData) {
-      await prisma.biodataOccupationInfo.create({
-        data: {
-          biodataId,
-          ...occupationInfoFormData,
-          createdBy: creator,
-        },
-      });
-    }
-
-    // Family Info
-    if (familyInfoFormData) {
-      await prisma.biodataFamilyInfo.create({
-        data: {
-          biodataId,
-          parentsAlive: familyInfoFormData?.parentsAlive,
-          fatherOccupation: familyInfoFormData?.fatherOccupation,
-          motherOccupation: familyInfoFormData?.motherOccupation,
-          fatherSideDetail: familyInfoFormData?.fatherSideDetail,
-          motherSideDetail: familyInfoFormData?.motherSideDetail,
-          familyType: familyInfoFormData?.familyType,
-          familyBackground: familyInfoFormData?.familyBackground,
-          livingCondition: familyInfoFormData?.livingCondition,
-          wealthDescription: familyInfoFormData?.wealthDescription,
-          createdBy: creator,
-        },
-      });
-
-      if (familyInfoFormData.siblings?.length) {
-        await prisma.biodataFamilyInfoSibling.createMany({
-          data: familyInfoFormData.siblings.map(
-            (sibling: {
-              type?: string;
-              occupation?: string;
-              maritalStatus?: string;
-              children?: string;
-            }) => ({
-              biodataId,
-              ...sibling,
-              createdBy: creator,
-            }),
-          ),
-        });
-      }
-    }
-
-    // Religious Info
-    if (religiousInfoFormData) {
-      await prisma.biodataReligiousInfo.create({
-        data: {
-          biodataId,
-          ...religiousInfoFormData,
-          createdBy: creator,
-        },
-      });
-    }
-
-    // Personal Info
-    if (personalInfoFormData) {
-      await prisma.biodataPersonalInfo.create({
-        data: {
-          biodataId,
-          ...personalInfoFormData,
-          createdBy: creator,
-        },
-      });
-    }
-
-    // Marriage Info
-    if (marriageInfoFormData) {
-      await prisma.biodataMarriageInfo.create({
-        data: {
-          biodataId,
-          ...marriageInfoFormData,
-          createdBy: creator,
-        },
-      });
-    }
-
-    // Spouse Preference Info
-    if (spousePreferenceInfoFormData) {
-      await prisma.biodataSpousePreferenceInfo.create({
-        data: {
-          biodataId,
-          ...spousePreferenceInfoFormData,
-          createdBy: creator,
-        },
-      });
-    }
-
-    // Notify admin
-    await prisma.notification.create({
-      data: {
-        type: 'NEW_BIODATA',
-        message: `A new biodata has been submitted by user ID: ${creator}`,
-        userId: creator,
-        biodataId: biodata.id,
-        isGlobal: false,
+    const { guardianContacts, ...primaryInfoData } = primaryInfoFormData;
+    await tx.biodataPrimaryInfo.upsert({
+      where: { biodataId },
+      update: {
+        ...primaryInfoData,
+        updatedBy: userId,
+        updatedAt: new Date(),
+      },
+      create: {
+        biodataId,
+        ...primaryInfoData,
+        createdBy: userId,
       },
     });
-    return biodata;
-  });
 
-  return result;
+    // Handle Guardian Contacts (Multiple Records)
+    if (guardianContacts?.length) {
+      await tx.biodataPrimaryInfoGuardianContact.deleteMany({
+        where: { biodataId },
+      });
+      await tx.biodataPrimaryInfoGuardianContact.createMany({
+        data: guardianContacts.map(contact => ({
+          biodataId,
+          relation: contact.relation,
+          fullName: contact.name,
+          phoneNumber: contact.mobile,
+          createdBy: userId,
+        })),
+      });
+    } else {
+      // Optionally clear guardian contacts if none provided
+      await tx.biodataPrimaryInfoGuardianContact.deleteMany({
+        where: { biodataId },
+      });
+    }
+  }
+
+  // Handle General Info (Single Record)
+  if (generalInfoFormData) {
+    const {
+      dateOfBirth,
+      maritalStatus,
+      skinTone,
+      height,
+      weight,
+      bloodGroup,
+      nationality,
+    } = generalInfoFormData;
+    await tx.biodataGeneralInfo.upsert({
+      where: { biodataId },
+      update: {
+        dateOfBirth,
+        maritalStatus,
+        skinTone,
+        height,
+        weight,
+        bloodGroup,
+        nationality,
+        updatedBy: userId,
+        updatedAt: new Date(),
+      },
+      create: {
+        biodataId,
+        dateOfBirth,
+        maritalStatus,
+        skinTone,
+        height,
+        weight,
+        bloodGroup,
+        nationality,
+        createdBy: userId,
+      },
+    });
+  }
+
+  // Handle Address Info (Multiple Records)
+  if (addressInfoFormData?.addresses?.length) {
+    await tx.biodataAddressInfo.deleteMany({ where: { biodataId } });
+    await tx.biodataAddressInfo.createMany({
+      data: addressInfoFormData.addresses.map(address => ({
+        biodataId,
+        type: address.type,
+        location: address.location,
+        state: address.state,
+        city: address.city,
+        country: address.country,
+        cityzenshipStatus: address.cityzenshipStatus,
+        createdBy: userId,
+      })),
+    });
+  } else {
+    await tx.biodataAddressInfo.deleteMany({ where: { biodataId } });
+  }
+
+  // Handle Education Info (Single Record)
+  if (educationInfoFormData) {
+    const { type, highestDegree, religiousEducation, detail, degrees } =
+      educationInfoFormData;
+    await tx.biodataEducationInfo.upsert({
+      where: { biodataId },
+      update: {
+        type,
+        highestDegree,
+        religiousEducation: religiousEducation ? [religiousEducation] : [],
+        detail,
+        updatedBy: userId,
+        updatedAt: new Date(),
+      },
+      create: {
+        biodataId,
+        type,
+        highestDegree,
+        religiousEducation: religiousEducation ? [religiousEducation] : [],
+        detail,
+        createdBy: userId,
+      },
+    });
+
+    // Handle Education Degrees (Multiple Records)
+    if (degrees?.length) {
+      await tx.biodataEducationInfoDegree.deleteMany({ where: { biodataId } });
+      await tx.biodataEducationInfoDegree.createMany({
+        data: degrees.map(degree => ({
+          biodataId,
+          degreeType: degree.degreeType,
+          name: degree.name,
+          passYear: degree.passYear,
+          group: degree.group,
+          institute: degree.institute,
+          createdBy: userId,
+        })),
+      });
+    } else {
+      await tx.biodataEducationInfoDegree.deleteMany({ where: { biodataId } });
+    }
+  }
+
+  // Handle Occupation Info (Single Record)
+  if (occupationInfoFormData) {
+    const { detail, occupations, monthlyIncome } = occupationInfoFormData;
+    await tx.biodataOccupationInfo.upsert({
+      where: { biodataId },
+      update: {
+        detail,
+        occupations,
+        monthlyIncome,
+        updatedBy: userId,
+        updatedAt: new Date(),
+      },
+      create: {
+        biodataId,
+        detail,
+        occupations,
+        monthlyIncome,
+        createdBy: userId,
+      },
+    });
+  }
+
+  // Handle Family Info (Single Record)
+  if (familyInfoFormData) {
+    const {
+      parentsAlive,
+      fatherOccupation,
+      motherOccupation,
+      fatherSideDetail,
+      motherSideDetail,
+      familyType,
+      familyBackground,
+      livingCondition,
+      wealthDescription,
+      siblings,
+    } = familyInfoFormData;
+    await tx.biodataFamilyInfo.upsert({
+      where: { biodataId },
+      update: {
+        parentsAlive,
+        fatherOccupation,
+        motherOccupation,
+        fatherSideDetail,
+        motherSideDetail,
+        familyType,
+        familyBackground,
+        livingCondition,
+        wealthDescription,
+        updatedBy: userId,
+        updatedAt: new Date(),
+      },
+      create: {
+        biodataId,
+        parentsAlive,
+        fatherOccupation,
+        motherOccupation,
+        fatherSideDetail,
+        motherSideDetail,
+        familyType,
+        familyBackground,
+        livingCondition,
+        wealthDescription,
+        createdBy: userId,
+      },
+    });
+
+    // Handle Family Siblings (Multiple Records)
+    if (siblings?.length) {
+      await tx.biodataFamilyInfoSibling.deleteMany({ where: { biodataId } });
+      await tx.biodataFamilyInfoSibling.createMany({
+        data: siblings.map(sibling => ({
+          biodataId,
+          type: sibling.type,
+          occupation: sibling.occupation,
+          maritalStatus: sibling.maritalStatus,
+          children: sibling.children,
+          createdBy: userId,
+        })),
+      });
+    } else {
+      await tx.biodataFamilyInfoSibling.deleteMany({ where: { biodataId } });
+    }
+  }
+
+  // Handle Religious Info (Single Record)
+  if (religiousInfoFormData) {
+    const {
+      type,
+      ideology,
+      madhab,
+      praysFiveTimes,
+      hasQazaPrayers,
+      canReciteQuranProperly,
+      avoidsHaramIncome,
+      modestDressing,
+      followsMahramRules,
+      beliefAboutPirMurshidAndMazar,
+      practicingSince,
+    } = religiousInfoFormData;
+    await tx.biodataReligiousInfo.upsert({
+      where: { biodataId },
+      update: {
+        type,
+        ideology,
+        madhab,
+        praysFiveTimes,
+        hasQazaPrayers,
+        canReciteQuranProperly,
+        avoidsHaramIncome,
+        modestDressing,
+        followsMahramRules,
+        beliefAboutPirMurshidAndMazar,
+        practicingSince,
+        updatedBy: userId,
+        updatedAt: new Date(),
+      },
+      create: {
+        biodataId,
+        type,
+        ideology,
+        madhab,
+        praysFiveTimes,
+        hasQazaPrayers,
+        canReciteQuranProperly,
+        avoidsHaramIncome,
+        modestDressing,
+        followsMahramRules,
+        beliefAboutPirMurshidAndMazar,
+        practicingSince,
+        createdBy: userId,
+      },
+    });
+  }
+
+  // Handle Personal Info (Single Record)
+  if (personalInfoFormData) {
+    const {
+      beardStatus,
+      preferredOutfit,
+      entertainmentPreferences,
+      healthConditions,
+      personalTraits,
+      genderEqualityView,
+      lgbtqOpinion,
+      specialConditions,
+    } = personalInfoFormData;
+    await tx.biodataPersonalInfo.upsert({
+      where: { biodataId },
+      update: {
+        beardStatus,
+        preferredOutfit,
+        entertainmentPreferences,
+        healthConditions,
+        personalTraits,
+        genderEqualityView,
+        lgbtqOpinion,
+        specialConditions,
+        updatedBy: userId,
+        updatedAt: new Date(),
+      },
+      create: {
+        biodataId,
+        beardStatus,
+        preferredOutfit,
+        entertainmentPreferences,
+        healthConditions,
+        personalTraits,
+        genderEqualityView,
+        lgbtqOpinion,
+        specialConditions,
+        createdBy: userId,
+      },
+    });
+  }
+
+  // Handle Marriage Info (Single Record)
+  if (marriageInfoFormData) {
+    const {
+      guardianApproval,
+      continueStudy,
+      careerPlan,
+      residence,
+      arrangeHijab,
+      dowryExpectation,
+      allowShowingPhotoOnline,
+      additionalMarriageInfo,
+    } = marriageInfoFormData;
+    await tx.biodataMarriageInfo.upsert({
+      where: { biodataId },
+      update: {
+        guardianApproval,
+        continueStudy,
+        careerPlan,
+        residence,
+        arrangeHijab,
+        dowryExpectation,
+        allowShowingPhotoOnline,
+        additionalMarriageInfo,
+        updatedBy: userId,
+        updatedAt: new Date(),
+      },
+      create: {
+        biodataId,
+        guardianApproval,
+        continueStudy,
+        careerPlan,
+        residence,
+        arrangeHijab,
+        dowryExpectation,
+        allowShowingPhotoOnline,
+        additionalMarriageInfo,
+        createdBy: userId,
+      },
+    });
+  }
+
+  // Handle Spouse Preference Info (Single Record)
+  if (spousePreferenceInfoFormData) {
+    const {
+      age,
+      skinTone,
+      height,
+      educationalQualification,
+      religiousEducationalQualification,
+      address,
+      maritalStatus,
+      specialCategory,
+      religiousType,
+      occupation,
+      familyBackground,
+      secondMarrige,
+      location,
+      qualities,
+    } = spousePreferenceInfoFormData;
+    await tx.biodataSpousePreferenceInfo.upsert({
+      where: { biodataId },
+      update: {
+        age,
+        skinTone,
+        height,
+        educationalQualification,
+        religiousEducationalQualification,
+        address,
+        maritalStatus,
+        specialCategory,
+        religiousType,
+        occupation,
+        familyBackground,
+        secondMarrige,
+        location,
+        qualities,
+        updatedBy: userId,
+        updatedAt: new Date(),
+      },
+      create: {
+        biodataId,
+        age,
+        skinTone,
+        height,
+        educationalQualification,
+        religiousEducationalQualification,
+        address,
+        maritalStatus,
+        specialCategory,
+        religiousType,
+        occupation,
+        familyBackground,
+        secondMarrige,
+        location,
+        qualities,
+        createdBy: userId,
+      },
+    });
+  }
+}
+
+const createABiodata = async (
+  req: Record<string, any>,
+  creator: string,
+): Promise<Biodata> => {
+  return handleBiodataOperation(null, req.body, creator);
 };
 
 const getFilteredBiodata = async (
@@ -320,12 +590,8 @@ const getFilteredBiodata = async (
   }
 
   andConditions.push({
-    status: {
-      equals: BiodataStatus.APPROVED,
-    },
-    visibility: {
-      equals: VisibilityStatus.PUBLIC,
-    },
+    status: { equals: BiodataStatus.APPROVED },
+    visibility: { equals: VisibilityStatus.PUBLIC },
   });
 
   const filterConditions = buildFilterConditions(filterData, relationFieldMap);
@@ -340,7 +606,14 @@ const getFilteredBiodata = async (
     skip,
     take: limit,
     include: {
-      primaryInfos: true, // optional if you need related data in response
+      primaryInfoFormData: true,
+      generalInfoFormData: true,
+      addressInfoFormData: true,
+      educationInfoFormData: true,
+      occupationInfoFormData: true,
+      familyInfoFormData: true,
+      religiousInfoFormData: true,
+      personalInfoFormData: true,
     },
     orderBy:
       options.sortBy && options.sortOrder
@@ -348,269 +621,130 @@ const getFilteredBiodata = async (
         : { id: 'desc' },
   });
 
-  const total = await prisma.biodata.count({
-    where: whereConditions,
-  });
+  const total = await prisma.biodata.count({ where: whereConditions });
+
+  const resultData = result.map(biodata => ({
+    id: biodata.id,
+    code: biodata.code,
+    biodataType: biodata.biodataType,
+    fullName: biodata.primaryInfoFormData?.[0]?.fullName,
+    birthYear: biodata.generalInfoFormData?.[0]?.dateOfBirth,
+    maritalStatus: biodata.generalInfoFormData?.[0]?.maritalStatus,
+    height: biodata.generalInfoFormData?.[0]?.height,
+    permanentAddress: biodata.addressInfoFormData?.[0]?.location,
+    occupation: biodata.occupationInfoFormData?.[0]?.occupations,
+    profilePic: biodata.profilePic,
+    createdAt: biodata.createdAt,
+    updatedAt: biodata.updatedAt,
+  }));
 
   return {
-    meta: {
-      page,
-      limit,
-      total,
-    },
-    data: result,
+    meta: { page, limit, total },
+    data: resultData,
   };
 };
 
-const getABiodata = async (BiodataId: string) => {
-  const Biodata = await prisma.biodata.findUniqueOrThrow({
-    where: {
-      id: BiodataId,
-      status: BiodataStatus.APPROVED,
-      visibility: VisibilityStatus.PUBLIC,
-    },
-  });
-
-  return Biodata;
-};
-
-const updateABiodata = async (
-  biodataId: string,
-  payload: Record<string, any>,
-  updater: string,
-): Promise<Biodata> => {
-  console.log(biodataId, payload, updater);
-  // Validate Biodata ID
-  await prisma.biodata.findFirstOrThrow({
+const getABiodata = async (biodataId: string) => {
+  const biodata = await prisma.biodata.findFirst({
     where: {
       id: biodataId,
       status: BiodataStatus.APPROVED,
       visibility: VisibilityStatus.PUBLIC,
     },
   });
-  // Extract data from request
-  const {
-    firstWordsFormData,
-    primaryInfoFormData,
-    generalInfoFormData,
-    addressInfoFormData,
-    educationInfoFormData,
-    occupationInfoFormData,
-    familyInfoFormData,
-    religiousInfoFormData,
-    personalInfoFormData,
-    marriageInfoFormData,
-    spousePreferenceInfoFormData,
-    profilePicFormData,
-    finalWordsFormData,
-  } = payload;
-
-  const result = await prisma.$transaction(async prisma => {
-    // Step 1: Update main biodata
-    await prisma.biodata.update({
-      where: { id: biodataId },
-      data: {
-        ...(profilePicFormData && {
-          profilePic: profilePicFormData?.photoId,
-        }),
-        ...(firstWordsFormData && {
-          preApprovalAcceptTerms: firstWordsFormData?.preApprovalAcceptTerms,
-          preApprovalOathTruthfulInfo:
-            firstWordsFormData?.preApprovalOathTruthfulInfo,
-          preApprovalOathLegalResponsibility:
-            firstWordsFormData?.preApprovalOathLegalResponsibility,
-        }),
-        ...(finalWordsFormData && {
-          postApprovalOathTruthfulInfo:
-            finalWordsFormData?.postApprovalOathTruthfulInfo,
-          postApprovalOathNoMisuse:
-            finalWordsFormData?.postApprovalOathNoMisuse,
-          postApprovalOathLegalResponsibility:
-            finalWordsFormData?.postApprovalOathLegalResponsibility,
-        }),
-      },
-    });
-
-    // Step 2: Upsert/update related fields
-    if (primaryInfoFormData) {
-      await prisma.biodataPrimaryInfo.upsert({
-        where: { biodataId },
-        update: {
-          ...primaryInfoFormData,
-          updatedBy: updater,
-        },
-      });
-
-      // Delete old guardian contacts and recreate
-      await prisma.biodataPrimaryInfoGuardianContact.deleteMany({
-        where: { biodataId },
-      });
-      if (primaryInfoFormData.guardianContacts?.length) {
-        await prisma.biodataPrimaryInfoGuardianContact.createMany({
-          data: primaryInfoFormData.guardianContacts.map(contact => ({
-            biodataId,
-            ...contact,
-            createdBy: updater,
-          })),
-        });
-      }
-    }
-
-    if (generalInfoFormData) {
-      await prisma.biodataGeneralInfo.upsert({
-        where: { biodataId },
-        update: { ...generalInfoFormData, updatedBy: updater },
-        // create: { biodataId, ...generalInfoFormData, createdBy: updater },
-      });
-    }
-
-    if (addressInfoFormData?.addresses?.length) {
-      await prisma.biodataAddressInfo.deleteMany({ where: { biodataId } });
-      await prisma.biodataAddressInfo.createMany({
-        data: addressInfoFormData.addresses.map(address => ({
-          biodataId,
-          ...address,
-          createdBy: updater,
-        })),
-      });
-    }
-
-    if (educationInfoFormData) {
-      await prisma.biodataEducationInfo.upsert({
-        where: { biodataId },
-        update: {
-          type: educationInfoFormData.type,
-          highestDegree: educationInfoFormData.highestDegree,
-          religiousEducation: educationInfoFormData.religiousEducation,
-          detail: educationInfoFormData.details,
-          updatedBy: updater,
-        },
-        create: {
-          biodataId,
-          type: educationInfoFormData.type,
-          highestDegree: educationInfoFormData.highestDegree,
-          religiousEducation: educationInfoFormData.religiousEducation,
-          detail: educationInfoFormData.details,
-          createdBy: updater,
-        },
-      });
-
-      if (educationInfoFormData.degrees?.length) {
-        await prisma.biodataEducationInfoDegree.deleteMany({
-          where: { biodataId },
-        });
-        await prisma.biodataEducationInfoDegree.createMany({
-          data: educationInfoFormData.degrees.map(degree => ({
-            biodataId,
-            ...degree,
-            createdBy: updater,
-          })),
-        });
-      }
-    }
-
-    if (occupationInfoFormData) {
-      await prisma.biodataOccupationInfo.upsert({
-        where: { biodataId },
-        update: { ...occupationInfoFormData, updatedBy: updater },
-        create: { biodataId, ...occupationInfoFormData, createdBy: updater },
-      });
-    }
-
-    if (familyInfoFormData) {
-      await prisma.biodataFamilyInfo.upsert({
-        where: { biodataId },
-        update: { ...familyInfoFormData, updatedBy: updater },
-        create: { biodataId, ...familyInfoFormData, createdBy: updater },
-      });
-
-      if (familyInfoFormData.siblings?.length) {
-        await prisma.biodataFamilyInfoSibling.deleteMany({
-          where: { biodataId },
-        });
-        await prisma.biodataFamilyInfoSibling.createMany({
-          data: familyInfoFormData.siblings.map(sibling => ({
-            biodataId,
-            ...sibling,
-            createdBy: updater,
-          })),
-        });
-      }
-    }
-
-    if (religiousInfoFormData) {
-      await prisma.biodataReligiousInfo.upsert({
-        where: { biodataId },
-        update: { ...religiousInfoFormData, updatedBy: updater },
-        create: { biodataId, ...religiousInfoFormData, createdBy: updater },
-      });
-    }
-
-    if (personalInfoFormData) {
-      await prisma.biodataPersonalInfo.upsert({
-        where: { biodataId },
-        update: { ...personalInfoFormData, updatedBy: updater },
-        create: { biodataId, ...personalInfoFormData, createdBy: updater },
-      });
-    }
-
-    if (marriageInfoFormData) {
-      await prisma.biodataMarriageInfo.upsert({
-        where: { biodataId },
-        update: { ...marriageInfoFormData, updatedBy: updater },
-        create: { biodataId, ...marriageInfoFormData, createdBy: updater },
-      });
-    }
-
-    if (spousePreferenceInfoFormData) {
-      await prisma.biodataSpousePreferenceInfo.upsert({
-        where: { biodataId },
-        update: { ...spousePreferenceInfoFormData, updatedBy: updater },
-        create: {
-          biodataId,
-          ...spousePreferenceInfoFormData,
-          createdBy: updater,
-        },
-      });
-    }
-
-    // Optional: Log update
-    await prisma.notification.create({
-      data: {
-        type: 'UPDATE_BIODATA',
-        message: `Biodata updated by user ID: ${updater}`,
-        userId: updater,
-        biodataId,
-        isGlobal: false,
-      },
-    });
-
-    return await prisma.biodata.findUnique({ where: { id: biodataId } });
-  });
-
-  return result;
+  if (!biodata) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Biodata not found');
+  }
+  return biodata;
 };
 
-const deleteABiodata = async (BiodataId: string): Promise<Biodata> => {
-  await prisma.biodata.findFirstOrThrow({
-    where: {
-      id: BiodataId,
+const getMyBiodata = async (userId: string) => {
+  const biodata = await prisma.biodata.findFirst({
+    where: { userId },
+    include: {
+      primaryInfoFormData: true,
+      generalInfoFormData: true,
+      addressInfoFormData: true,
+      educationInfoFormData: true,
+      occupationInfoFormData: true,
+      familyInfoFormData: true,
+      religiousInfoFormData: true,
+      personalInfoFormData: true,
+      marriageInfoFormData: true,
+      spousePreferenceInfoFormData: true,
+      guardianContacts: true,
     },
   });
 
-  const result = await prisma.biodata.delete({
-    where: {
-      id: BiodataId,
+  return biodata;
+};
+
+const updateMyBiodata = async (
+  userId: string,
+  payload: BiodataFormData,
+): Promise<Biodata> => {
+  // Validate payload
+  if (!payload || Object.keys(payload).length === 0) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'No data provided for update');
+  }
+
+  // Check if biodata exists
+  const existingBiodata = await prisma.biodata.findFirst({
+    where: { userId },
+  });
+
+  // Create or update biodata
+  const biodata = await handleBiodataOperation(
+    existingBiodata?.id || null,
+    payload,
+    userId,
+  );
+
+  // Fetch updated biodata with related records
+  const biodataData = await prisma.biodata.findFirst({
+    where: { id: biodata.id },
+    include: {
+      primaryInfoFormData: true,
+      generalInfoFormData: true,
+      addressInfoFormData: true,
+      educationInfoFormData: true,
+      occupationInfoFormData: true,
+      familyInfoFormData: true,
+      religiousInfoFormData: true,
+      personalInfoFormData: true,
+      marriageInfoFormData: true,
+      spousePreferenceInfoFormData: true,
+      guardianContacts: true,
     },
   });
 
-  return result;
+  if (!biodataData) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Biodata not found after update');
+  }
+
+  return biodataData;
+};
+
+const updateBiodataByAdmin = async (
+  biodataId: string,
+  payload: Record<string, any>,
+  updater: string,
+): Promise<Biodata> => {
+  await prisma.biodata.findFirstOrThrow({ where: { id: biodataId } });
+  return handleBiodataOperation(biodataId, payload, updater, true);
+};
+
+const deleteABiodata = async (biodataId: string): Promise<Biodata> => {
+  await prisma.biodata.findFirstOrThrow({ where: { id: biodataId } });
+  return prisma.biodata.delete({ where: { id: biodataId } });
 };
 
 export const BiodataServices = {
   createABiodata,
   getFilteredBiodata,
   getABiodata,
-  updateABiodata,
+  getMyBiodata,
+  updateMyBiodata,
+  updateBiodataByAdmin,
   deleteABiodata,
 };

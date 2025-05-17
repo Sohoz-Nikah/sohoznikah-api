@@ -96,8 +96,8 @@ enum UserStatus {
  */
 model Biodata {
     id                                  String           @id @default(uuid())
-    code                                String           @unique
-    biodataType                         BioDataType
+    code                                String?          @unique
+    biodataType                         BioDataType?
     userId                              String           @unique
     preApprovalAcceptTerms              Boolean          @default(false)
     preApprovalOathTruthfulInfo         Boolean          @default(false)
@@ -121,26 +121,25 @@ model Biodata {
     creator User? @relation("BiodataCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
     updater User? @relation("BiodataUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
 
-    primaryInfos          BiodataPrimaryInfo[]
-    generalInfos          BiodataGeneralInfo[]
-    addressInfos          BiodataAddressInfo[]
-    educationInfos        BiodataEducationInfo[]
-    educationDegrees      BiodataEducationInfoDegree[]
-    occupationInfos       BiodataOccupationInfo[]
-    familyInfos           BiodataFamilyInfo[]
-    familySiblings        BiodataFamilyInfoSibling[]
-    religiousInfos        BiodataReligiousInfo[]
-    personalInfos         BiodataPersonalInfo[]
-    marriageInfos         BiodataMarriageInfo[]
-    spousePreferenceInfos BiodataSpousePreferenceInfo[]
-
-    primaryInfoGuardianContacts BiodataPrimaryInfoGuardianContact[]
-    favouriteBiodata            FavouriteBiodata[]
-    shortlistBiodata            ShortlistBiodata[]
-    proposal                    Proposal[]
-    contactAccess               ContactAccess[]
-    biodataChangeLog            BiodataChangeLog[]
-    Notification                Notification[]
+    primaryInfoFormData          BiodataPrimaryInfo[]
+    guardianContacts             BiodataPrimaryInfoGuardianContact[]
+    generalInfoFormData          BiodataGeneralInfo[]
+    addressInfoFormData          BiodataAddressInfo[]
+    educationInfoFormData        BiodataEducationInfo[]
+    educationDegrees             BiodataEducationInfoDegree[]
+    occupationInfoFormData       BiodataOccupationInfo[]
+    familyInfoFormData           BiodataFamilyInfo[]
+    familySiblings               BiodataFamilyInfoSibling[]
+    religiousInfoFormData        BiodataReligiousInfo[]
+    personalInfoFormData         BiodataPersonalInfo[]
+    marriageInfoFormData         BiodataMarriageInfo[]
+    spousePreferenceInfoFormData BiodataSpousePreferenceInfo[]
+    favouriteBiodata             FavouriteBiodata[]
+    shortlistBiodata             ShortlistBiodata[]
+    proposal                     Proposal[]
+    contactAccess                ContactAccess[]
+    biodataChangeLog             BiodataChangeLog[]
+    Notification                 Notification[]
 }
 
 enum VisibilityStatus {
@@ -163,14 +162,14 @@ enum BiodataStatus {
 
 model BiodataPrimaryInfo {
     id          String      @id @default(uuid())
-    biodataId   String
+    biodataId   String      @unique
     biodataType BioDataType
     biodataFor  String
     fullName    String
     fatherName  String
     motherName  String
     email       String
-    mobile      String
+    phoneNumber String
     createdBy   String?
     createdAt   DateTime    @default(now())
     updatedBy   String?
@@ -183,7 +182,7 @@ model BiodataPrimaryInfo {
 
 model BiodataGeneralInfo {
     id            String    @id @default(uuid())
-    biodataId     String
+    biodataId     String    @unique
     dateOfBirth   String
     maritalStatus String
     skinTone      String
@@ -222,7 +221,7 @@ model BiodataAddressInfo {
 
 model BiodataEducationInfo {
     id                 String    @id @default(uuid())
-    biodataId          String
+    biodataId          String    @unique
     type               String
     highestDegree      String
     religiousEducation String[]
@@ -257,7 +256,7 @@ model BiodataEducationInfoDegree {
 
 model BiodataOccupationInfo {
     id            String    @id @default(uuid())
-    biodataId     String
+    biodataId     String    @unique
     occupations   String[]
     detail        String
     monthlyIncome String?
@@ -273,7 +272,7 @@ model BiodataOccupationInfo {
 
 model BiodataFamilyInfo {
     id                String    @id @default(uuid())
-    biodataId         String
+    biodataId         String    @unique
     parentsAlive      String
     fatherOccupation  String?
     motherOccupation  String?
@@ -312,7 +311,7 @@ model BiodataFamilyInfoSibling {
 
 model BiodataReligiousInfo {
     id                            String    @id @default(uuid())
-    biodataId                     String
+    biodataId                     String    @unique
     type                          String
     ideology                      String
     madhab                        String
@@ -336,7 +335,7 @@ model BiodataReligiousInfo {
 
 model BiodataPersonalInfo {
     id                       String    @id @default(uuid())
-    biodataId                String
+    biodataId                String    @unique
     beardStatus              String
     preferredOutfit          String
     entertainmentPreferences String
@@ -357,7 +356,7 @@ model BiodataPersonalInfo {
 
 model BiodataMarriageInfo {
     id                      String    @id @default(uuid())
-    biodataId               String
+    biodataId               String    @unique
     guardianApproval        String?
     continueStudy           String[]
     careerPlan              String?
@@ -378,7 +377,7 @@ model BiodataMarriageInfo {
 
 model BiodataSpousePreferenceInfo {
     id                                String    @id @default(uuid())
-    biodataId                         String
+    biodataId                         String    @unique
     age                               String
     skinTone                          String[]
     height                            String?
@@ -404,15 +403,15 @@ model BiodataSpousePreferenceInfo {
 }
 
 model BiodataPrimaryInfoGuardianContact {
-    id        String    @id @default(uuid())
-    biodataId String
-    relation  String?
-    name      String?
-    mobile    String?
-    createdBy String?
-    createdAt DateTime  @default(now())
-    updatedBy String?
-    updatedAt DateTime?
+    id          String    @id @default(uuid())
+    biodataId   String
+    relation    String?
+    fullName    String?
+    phoneNumber String?
+    createdBy   String?
+    createdAt   DateTime  @default(now())
+    updatedBy   String?
+    updatedAt   DateTime?
 
     biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
     creator User?   @relation("GuardianContactInfoCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)

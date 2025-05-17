@@ -21,6 +21,7 @@ const createABiodata = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getFilteredBiodata = catchAsync(async (req: Request, res: Response) => {
+  console.log(req.query);
   const filters = pick(req.query, BiodataFilterableFields);
   const options = pick(req.query, ['limit', 'page', 'sortBy', 'sortOrder']);
   const result = await BiodataServices.getFilteredBiodata(filters, options);
@@ -46,11 +47,35 @@ const getABiodata = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const updateABiodata = catchAsync(async (req: Request, res: Response) => {
+const getMyBiodata = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user as JwtPayload;
+  const result = await BiodataServices.getMyBiodata(userId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Biodata retrieved successfully',
+    data: result,
+  });
+});
+
+const updateMyBiodata = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user as JwtPayload;
+  const result = await BiodataServices.updateMyBiodata(userId, req.body);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Biodata updated successfully',
+    data: result,
+  });
+});
+
+const updateBiodataByAdmin = catchAsync(async (req: Request, res: Response) => {
   const { id: biodataId } = req.params;
   const { userId } = req.user as JwtPayload;
 
-  const result = await BiodataServices.updateABiodata(
+  const result = await BiodataServices.updateBiodataByAdmin(
     biodataId,
     req.body,
     userId,
@@ -83,6 +108,8 @@ export const BiodataControllers = {
   createABiodata,
   getFilteredBiodata,
   getABiodata,
-  updateABiodata,
+  getMyBiodata,
+  updateMyBiodata,
+  updateBiodataByAdmin,
   deleteABiodata,
 };
