@@ -10,8 +10,8 @@ export type IBiodataFilterRequest = {
 // Types for form data
 export interface GuardianContact {
   relation: string;
-  name: string;
-  mobile: string;
+  fullName: string;
+  phoneNumber: string;
 }
 
 export interface Address {
@@ -32,6 +32,7 @@ export interface Degree {
 }
 
 export interface Sibling {
+  serial?: string;
   type?: string;
   occupation?: string;
   maritalStatus?: string;
@@ -61,7 +62,7 @@ export interface BiodataFormData {
   educationInfoFormData?: {
     type: string;
     highestDegree: string;
-    religiousEducation: string;
+    religiousEducation: string[];
     detail: string;
     degrees?: Degree[];
   };
@@ -89,5 +90,6 @@ export interface BiodataFormData {
     postApprovalOathTruthfulInfo: boolean;
     postApprovalOathNoMisuse: boolean;
     postApprovalOathLegalResponsibility: boolean;
+    visibility?: string;
   };
 }

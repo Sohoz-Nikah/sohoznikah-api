@@ -201,18 +201,20 @@ model BiodataGeneralInfo {
 }
 
 model BiodataAddressInfo {
-    id                String    @id @default(uuid())
-    biodataId         String
-    type              String
-    location          String
-    state             String
-    city              String
-    country           String
-    cityzenshipStatus String?
-    createdBy         String?
-    createdAt         DateTime  @default(now())
-    updatedBy         String?
-    updatedAt         DateTime?
+    id                   String    @id @default(uuid())
+    biodataId            String
+    type                 String
+    location             String
+    state                String?
+    city                 String
+    country              String
+    detail               String?
+    permanentHomeAddress String?
+    cityzenshipStatus    String?
+    createdBy            String?
+    createdAt            DateTime  @default(now())
+    updatedBy            String?
+    updatedAt            DateTime?
 
     biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
     creator User?   @relation("AddressInfoCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
@@ -242,7 +244,7 @@ model BiodataEducationInfoDegree {
     degreeType String
     name       String
     passYear   String
-    group      String
+    group      String?
     institute  String
     createdBy  String?
     createdAt  DateTime  @default(now())
@@ -295,6 +297,7 @@ model BiodataFamilyInfo {
 model BiodataFamilyInfoSibling {
     id            String    @id @default(uuid())
     biodataId     String
+    serial        String?
     type          String?
     occupation    String?
     maritalStatus String?
@@ -316,9 +319,9 @@ model BiodataReligiousInfo {
     ideology                      String
     madhab                        String
     praysFiveTimes                String
-    hasQazaPrayers                String
+    hasQazaPrayers                String?
     canReciteQuranProperly        String
-    avoidsHaramIncome             String
+    avoidsHaramIncome             String?
     modestDressing                String?
     followsMahramRules            String?
     beliefAboutPirMurshidAndMazar String?
@@ -344,6 +347,7 @@ model BiodataPersonalInfo {
     genderEqualityView       String?
     lgbtqOpinion             String?
     specialConditions        String[]
+    aboutYourself            String?
     createdBy                String?
     createdAt                DateTime  @default(now())
     updatedBy                String?
@@ -355,20 +359,27 @@ model BiodataPersonalInfo {
 }
 
 model BiodataMarriageInfo {
-    id                      String    @id @default(uuid())
-    biodataId               String    @unique
-    guardianApproval        String?
-    continueStudy           String[]
-    careerPlan              String?
-    residence               String?
-    arrangeHijab            String?
-    dowryExpectation        String?
-    allowShowingPhotoOnline String?
-    additionalMarriageInfo  String?
-    createdBy               String?
-    createdAt               DateTime  @default(now())
-    updatedBy               String?
-    updatedAt               DateTime?
+    id                                Int      @id @default(autoincrement())
+    biodataId                         String   @unique
+    reasonForRemarriage               String?
+    currentSpouseAndChildren          String?
+    previousMarriageAndDivorceDetails String?
+    spouseDeathDetails                String?
+    childrenDetails                   String?
+    guardianApproval                  String
+    continueStudy                     String
+    continueStudyDetails              String?
+    careerPlan                        String
+    careerPlanDetails                 String?
+    residence                         String
+    arrangeHijab                      String?
+    dowryExpectation                  String
+    allowShowingPhotoOnline           String?
+    additionalMarriageInfo            String?
+    createdBy                         String
+    updatedBy                         String?
+    createdAt                         DateTime @default(now())
+    updatedAt                         DateTime @updatedAt
 
     biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
     creator User?   @relation("MarriageInfoCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)

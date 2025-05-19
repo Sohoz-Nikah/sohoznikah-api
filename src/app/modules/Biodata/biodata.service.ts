@@ -121,7 +121,10 @@ async function handleRelatedRecords(
   if (finalWordsFormData) {
     await tx.biodata.update({
       where: { id: biodataId },
-      data: { ...finalWordsFormData },
+      data: {
+        ...finalWordsFormData,
+        visibility: finalWordsFormData.visibility as VisibilityStatus,
+      },
     });
   }
 
@@ -173,8 +176,8 @@ async function handleRelatedRecords(
         data: guardianContacts.map(contact => ({
           biodataId,
           relation: contact.relation,
-          fullName: contact.name,
-          phoneNumber: contact.mobile,
+          fullName: contact.fullName,
+          phoneNumber: contact.phoneNumber,
           createdBy: userId,
         })),
       });
@@ -252,7 +255,7 @@ async function handleRelatedRecords(
       update: {
         type,
         highestDegree,
-        religiousEducation: religiousEducation ? [religiousEducation] : [],
+        religiousEducation,
         detail,
         updatedBy: userId,
         updatedAt: new Date(),
@@ -261,7 +264,7 @@ async function handleRelatedRecords(
         biodataId,
         type,
         highestDegree,
-        religiousEducation: religiousEducation ? [religiousEducation] : [],
+        religiousEducation,
         detail,
         createdBy: userId,
       },
@@ -358,6 +361,7 @@ async function handleRelatedRecords(
       await tx.biodataFamilyInfoSibling.createMany({
         data: siblings.map(sibling => ({
           biodataId,
+          serial: sibling.serial,
           type: sibling.type,
           occupation: sibling.occupation,
           maritalStatus: sibling.maritalStatus,
@@ -431,6 +435,7 @@ async function handleRelatedRecords(
       genderEqualityView,
       lgbtqOpinion,
       specialConditions,
+      aboutYourself,
     } = personalInfoFormData;
     await tx.biodataPersonalInfo.upsert({
       where: { biodataId },
@@ -443,6 +448,7 @@ async function handleRelatedRecords(
         genderEqualityView,
         lgbtqOpinion,
         specialConditions,
+        aboutYourself,
         updatedBy: userId,
         updatedAt: new Date(),
       },
@@ -456,6 +462,7 @@ async function handleRelatedRecords(
         genderEqualityView,
         lgbtqOpinion,
         specialConditions,
+        aboutYourself,
         createdBy: userId,
       },
     });
@@ -464,9 +471,16 @@ async function handleRelatedRecords(
   // Handle Marriage Info (Single Record)
   if (marriageInfoFormData) {
     const {
+      reasonForRemarriage,
+      currentSpouseAndChildren,
+      previousMarriageAndDivorceDetails,
+      spouseDeathDetails,
+      childrenDetails,
       guardianApproval,
       continueStudy,
+      continueStudyDetails,
       careerPlan,
+      careerPlanDetails,
       residence,
       arrangeHijab,
       dowryExpectation,
@@ -476,9 +490,16 @@ async function handleRelatedRecords(
     await tx.biodataMarriageInfo.upsert({
       where: { biodataId },
       update: {
+        reasonForRemarriage,
+        currentSpouseAndChildren,
+        previousMarriageAndDivorceDetails,
+        spouseDeathDetails,
+        childrenDetails,
         guardianApproval,
         continueStudy,
+        continueStudyDetails,
         careerPlan,
+        careerPlanDetails,
         residence,
         arrangeHijab,
         dowryExpectation,
@@ -489,9 +510,16 @@ async function handleRelatedRecords(
       },
       create: {
         biodataId,
+        reasonForRemarriage,
+        currentSpouseAndChildren,
+        previousMarriageAndDivorceDetails,
+        spouseDeathDetails,
+        childrenDetails,
         guardianApproval,
         continueStudy,
+        continueStudyDetails,
         careerPlan,
+        careerPlanDetails,
         residence,
         arrangeHijab,
         dowryExpectation,
@@ -666,8 +694,10 @@ const getMyBiodata = async (userId: string) => {
       generalInfoFormData: true,
       addressInfoFormData: true,
       educationInfoFormData: true,
+      educationDegrees: true,
       occupationInfoFormData: true,
       familyInfoFormData: true,
+      familySiblings: true,
       religiousInfoFormData: true,
       personalInfoFormData: true,
       marriageInfoFormData: true,
