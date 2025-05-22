@@ -11,9 +11,17 @@ import ApiError from '../../errors/ApiError';
 import { paginationHelpers } from '../../helper/paginationHelper';
 import { IPaginationOptions } from '../../interface/iPaginationOptions';
 import prisma from '../../shared/prisma';
-import { buildFilterConditions } from '../../utils/buildFilterConditions';
+import {
+  buildFilterConditions,
+  RelationMap,
+} from '../../utils/buildFilterConditions';
+import { buildRangeConditions } from '../../utils/buildRangeCondition';
 import generateUniqueCode from '../../utils/generateUniqueCode';
-import { BiodataSearchAbleFields, relationFieldMap } from './biodata.constant';
+import {
+  BiodataSearchAbleFields,
+  rangeConfigs,
+  relationFieldMap,
+} from './biodata.constant';
 import { BiodataFormData, IBiodataFilterRequest } from './biodata.interface';
 
 // Helper function to handle biodata creation/update
@@ -226,7 +234,6 @@ async function handleRelatedRecords(
       },
     });
   }
-
   // Handle Address Info (Multiple Records)
   if (addressInfoFormData?.addresses?.length) {
     await tx.biodataAddressInfo.deleteMany({ where: { biodataId } });
@@ -238,7 +245,9 @@ async function handleRelatedRecords(
         state: address.state,
         city: address.city,
         country: address.country,
+        permanentHomeAddress: address.permanentHomeAddress,
         cityzenshipStatus: address.cityzenshipStatus,
+        detail: address.detail,
         createdBy: userId,
       })),
     });
@@ -594,81 +603,107 @@ const createABiodata = async (
   req: Record<string, any>,
   creator: string,
 ): Promise<Biodata> => {
+  console.log('req.body', req.body);
   return handleBiodataOperation(null, req.body, creator);
 };
 
-const getFilteredBiodata = async (
+export const getFilteredBiodata = async (
   filters: IBiodataFilterRequest,
   options: IPaginationOptions,
 ) => {
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
-  const { searchTerm, ...filterData } = filters;
 
-  const andConditions: any[] = [];
+  // 1) extract special keys:
+  const {
+    ageMin,
+    ageMax,
+    heightMin,
+    heightMax,
+    currentState,
+    searchTerm,
+    ...restFilters
+  } = filters;
 
+  // 2) base AND:
+  const and: Prisma.BiodataWhereInput[] = [
+    { status: { equals: BiodataStatus.APPROVED } },
+    { visibility: { equals: VisibilityStatus.PUBLIC } },
+  ];
+
+  // 3) searchTerm:
   if (searchTerm) {
-    andConditions.push({
-      OR: BiodataSearchAbleFields.map(field => ({
-        [field]: {
-          contains: searchTerm,
-          mode: 'insensitive',
-        },
+    and.push({
+      OR: BiodataSearchAbleFields.map(f => ({
+        [f]: { contains: searchTerm, mode: 'insensitive' },
       })),
     });
   }
 
-  andConditions.push({
-    status: { equals: BiodataStatus.APPROVED },
-    visibility: { equals: VisibilityStatus.PUBLIC },
-  });
+  // 4) root‐level scalar:
+  // if (currentState) {
+  //   and.push({ currentState: { equals: currentState } });
+  // }
 
-  const filterConditions = buildFilterConditions(filterData, relationFieldMap);
-  if (Object.keys(filterConditions).length)
-    andConditions.push(filterConditions);
+  // 5) numeric ranges:
+  const rangeClauses = buildRangeConditions(filters, rangeConfigs);
+  console.log('rangeClauses', rangeClauses);
+  and.push(...rangeClauses);
 
-  const whereConditions: Prisma.BiodataWhereInput =
-    andConditions.length > 0 ? { AND: andConditions } : {};
+  // 6) the rest of your filters:
+  const filterConditions = buildFilterConditions(
+    restFilters,
+    relationFieldMap as RelationMap,
+  );
+  if (Object.keys(filterConditions).length) {
+    and.push(filterConditions);
+  }
 
-  const result = await prisma.biodata.findMany({
-    where: whereConditions,
-    skip,
-    take: limit,
-    include: {
-      primaryInfoFormData: true,
-      generalInfoFormData: true,
-      addressInfoFormData: true,
-      educationInfoFormData: true,
-      occupationInfoFormData: true,
-      familyInfoFormData: true,
-      religiousInfoFormData: true,
-      personalInfoFormData: true,
-    },
-    orderBy:
-      options.sortBy && options.sortOrder
-        ? { [options.sortBy]: options.sortOrder }
-        : { id: 'desc' },
-  });
+  // 7) final where:
+  const where: Prisma.BiodataWhereInput = and.length ? { AND: and } : {};
 
-  const total = await prisma.biodata.count({ where: whereConditions });
+  // 8) query + count:
+  const [rows, total] = await Promise.all([
+    prisma.biodata.findMany({
+      where,
+      skip,
+      take: limit,
+      include: {
+        primaryInfoFormData: true,
+        generalInfoFormData: true,
+        addressInfoFormData: true,
+        educationInfoFormData: true,
+        occupationInfoFormData: true,
+        familyInfoFormData: true,
+        religiousInfoFormData: true,
+        personalInfoFormData: true,
+      },
+      orderBy:
+        options.sortBy && options.sortOrder
+          ? { [options.sortBy]: options.sortOrder }
+          : { id: 'desc' },
+    }),
+    prisma.biodata.count({ where }),
+  ]);
 
-  const resultData = result.map(biodata => ({
-    id: biodata.id,
-    code: biodata.code,
-    biodataType: biodata.biodataType,
-    fullName: biodata.primaryInfoFormData?.[0]?.fullName,
-    birthYear: biodata.generalInfoFormData?.[0]?.dateOfBirth,
-    maritalStatus: biodata.generalInfoFormData?.[0]?.maritalStatus,
-    height: biodata.generalInfoFormData?.[0]?.height,
-    permanentAddress: biodata.addressInfoFormData?.[0]?.location,
-    occupation: biodata.occupationInfoFormData?.[0]?.occupations,
-    profilePic: biodata.profilePic,
-    createdAt: biodata.createdAt,
-    updatedAt: biodata.updatedAt,
+  // 9) map to DTO:
+  const data = rows.map(b => ({
+    id: b.id,
+    code: b.code,
+    biodataType: b.primaryInfoFormData?.[0]?.biodataType,
+    fullName: b.primaryInfoFormData?.[0]?.fullName,
+    birthYear: b.generalInfoFormData?.[0]?.dateOfBirth,
+    maritalStatus: b.generalInfoFormData?.[0]?.maritalStatus,
+    height: b.generalInfoFormData?.[0]?.height,
+    permanentAddress: b.addressInfoFormData?.[0]?.location,
+    occupation: b.occupationInfoFormData?.[0]?.occupations,
+    profilePic: b.profilePic,
+    createdAt: b.createdAt,
+    updatedAt: b.updatedAt,
   }));
 
   return {
     meta: { page, limit, total },
-    data: resultData,
+    data,
   };
 };
 

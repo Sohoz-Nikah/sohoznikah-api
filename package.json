@@ -16,7 +16,8 @@
     "prisma-migrate": "npx prisma migrate dev ",
     "prisma-generate": "npx prisma generate",
     "prisma-reset": "npx prisma migrate reset",
-    "seed": "ts-node-dev --respawn --transpile-only prisma/seed.ts"
+    "seed": "ts-node-dev --respawn --transpile-only prisma/seed.ts",
+    "seed-data": "ts-node-dev --respawn --transpile-only prisma/seedData.ts"
   },
   "keywords": [],
   "author": "",

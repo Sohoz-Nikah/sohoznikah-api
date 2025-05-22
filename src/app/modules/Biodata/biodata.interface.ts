@@ -3,8 +3,24 @@ import { BioDataType } from '@prisma/client';
 export type IBiodataFilterRequest = {
   searchTerm?: string | undefined;
   biodataType?: string | undefined;
-  age?: string | undefined;
+  ageMin?: number | undefined;
+  ageMax?: number | undefined;
+  currentState?: string | undefined;
   maritalStatus?: string | undefined;
+  skinTone?: string | undefined;
+  heightMin?: number | undefined;
+  heightMax?: number | undefined;
+  occupation?: string | undefined;
+  education?: string | undefined;
+  religiousEducation?: string | undefined;
+  familyStatus?: string | undefined;
+  madhhab?: string | undefined;
+  bloodGroup?: string | undefined;
+  specialCategory?: string | undefined;
+  partnerBiodataType?: string | undefined;
+  partnerMaritalStatus?: string | undefined;
+  partnerAgeMin?: number | undefined;
+  partnerAgeMax?: number | undefined;
 };
 
 // Types for form data
@@ -21,6 +37,8 @@ export interface Address {
   city: string;
   country: string;
   cityzenshipStatus: string;
+  detail: string;
+  permanentHomeAddress: string;
 }
 
 export interface Degree {
@@ -92,4 +110,11 @@ export interface BiodataFormData {
     postApprovalOathLegalResponsibility: boolean;
     visibility?: string;
   };
+}
+
+export interface RangeConfig {
+  minKey: string;
+  maxKey: string;
+  relation: string;
+  field: string;
 }
