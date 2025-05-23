@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ShortlistBiodata, Prisma } from '@prisma/client';
-import prisma from '../../shared/prisma';
-import { IShortlistFilterRequest } from './shortList.interface';
-import { IPaginationOptions } from '../../interface/iPaginationOptions';
-import { paginationHelpers } from '../../helper/paginationHelper';
-import { ShortlistSearchAbleFields } from './shortList.constant';
-import ApiError from '../../errors/ApiError';
+import { Prisma, ShortlistBiodata } from '@prisma/client';
 import httpStatus from 'http-status';
 import { JwtPayload } from 'jsonwebtoken';
+import ApiError from '../../errors/ApiError';
+import { paginationHelpers } from '../../helper/paginationHelper';
+import { IPaginationOptions } from '../../interface/iPaginationOptions';
+import prisma from '../../shared/prisma';
+import { ShortlistSearchAbleFields } from './shortList.constant';
+import { IShortlistFilterRequest } from './shortList.interface';
 
 const createAShortlist = async (
   payload: Record<string, any>,
@@ -109,24 +109,30 @@ const getFilteredShortlist = async (
   };
 };
 
-const getAShortlist = async (ShortlistId: string) => {
-  const result = await prisma.shortlistBiodata.findUniqueOrThrow({
+const getAShortlist = async (biodataId: string, userId: string) => {
+  const result = await prisma.shortlistBiodata.findFirst({
     where: {
-      id: ShortlistId,
+      biodataId: biodataId,
+      userId,
     },
   });
-
+  if (!result) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Shortlist not found');
+  }
   return result;
 };
 
-const deleteAShortlist = async (
-  ShortlistId: string,
-): Promise<ShortlistBiodata> => {
-  await prisma.shortlistBiodata.findFirstOrThrow({
+const deleteAShortlist = async (ShortlistId: string, userId: string) => {
+  const existingShortlist = await prisma.shortlistBiodata.findFirst({
     where: {
       id: ShortlistId,
+      userId,
     },
   });
+
+  if (!existingShortlist) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Shortlist not found');
+  }
 
   const result = await prisma.shortlistBiodata.delete({
     where: {

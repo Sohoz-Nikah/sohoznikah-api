@@ -33,7 +33,7 @@ git clone <repository-link>
 cd <project_name>
 ```
 
-3. Please update the filename from `.env.example` to `.env`
+3. Please update the filename from `.env.example` to `.env` and Fill your own data
 
 4. **Install Dependencies:**
 
@@ -41,10 +41,34 @@ cd <project_name>
 yarn install
 ```
 
+or
+
+```shell
+npm install
+```
+
+5. **Generate Prisma:**
+
+```shell
+npx prisma generate
+```
+
+5. **Generate migration:**
+
+```shell
+npx prisma migrate dev
+```
+
 5. **Start the Server:**
 
 ```shell
 yarn dev
+```
+
+or
+
+```shell
+npm run dev
 ```
 
 The server will be running at **`http://localhost:5000`** .

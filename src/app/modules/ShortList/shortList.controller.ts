@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
-import sendResponse from '../../shared/sendResponse';
 import httpStatus from 'http-status';
+import { JwtPayload } from 'jsonwebtoken';
 import catchAsync from '../../shared/catchAsync';
 import pick from '../../shared/pick';
-import { ShortlistServices } from './shortList.service';
+import sendResponse from '../../shared/sendResponse';
 import { ShortlistFilterableFields } from './shortList.constant';
-import { JwtPayload } from 'jsonwebtoken';
+import { ShortlistServices } from './shortList.service';
 
 const createAShortlist = catchAsync(async (req: Request, res: Response) => {
   const result = await ShortlistServices.createAShortlist(
@@ -37,7 +37,8 @@ const getFilteredShortlist = catchAsync(async (req: Request, res: Response) => {
 
 const getAShortlist = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const result = await ShortlistServices.getAShortlist(id);
+  const user = req.user as JwtPayload;
+  const result = await ShortlistServices.getAShortlist(id, user.id);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -48,9 +49,10 @@ const getAShortlist = catchAsync(async (req: Request, res: Response) => {
 });
 
 const deleteAShortlist = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload;
   const { id: ShortlistId } = req.params;
 
-  const result = await ShortlistServices.deleteAShortlist(ShortlistId);
+  const result = await ShortlistServices.deleteAShortlist(ShortlistId, user.id);
 
   if (result) {
     sendResponse(res, {

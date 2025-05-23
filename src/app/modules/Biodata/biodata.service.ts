@@ -714,6 +714,21 @@ const getABiodata = async (biodataId: string) => {
       status: BiodataStatus.APPROVED,
       visibility: VisibilityStatus.PUBLIC,
     },
+    include: {
+      primaryInfoFormData: true,
+      generalInfoFormData: true,
+      addressInfoFormData: true,
+      educationInfoFormData: true,
+      educationDegrees: true,
+      occupationInfoFormData: true,
+      familyInfoFormData: true,
+      familySiblings: true,
+      religiousInfoFormData: true,
+      personalInfoFormData: true,
+      marriageInfoFormData: true,
+      spousePreferenceInfoFormData: true,
+      guardianContacts: true,
+    },
   });
   if (!biodata) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Biodata not found');

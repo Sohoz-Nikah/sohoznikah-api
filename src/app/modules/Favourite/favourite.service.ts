@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { FavouriteBiodata, Prisma } from '@prisma/client';
-import prisma from '../../shared/prisma';
-import { IFavouriteFilterRequest } from './favourite.interface';
-import { IPaginationOptions } from '../../interface/iPaginationOptions';
-import { paginationHelpers } from '../../helper/paginationHelper';
-import { FavouriteSearchAbleFields } from './favourite.constant';
-import ApiError from '../../errors/ApiError';
 import httpStatus from 'http-status';
 import { JwtPayload } from 'jsonwebtoken';
+import ApiError from '../../errors/ApiError';
+import { paginationHelpers } from '../../helper/paginationHelper';
+import { IPaginationOptions } from '../../interface/iPaginationOptions';
+import prisma from '../../shared/prisma';
+import { FavouriteSearchAbleFields } from './favourite.constant';
+import { IFavouriteFilterRequest } from './favourite.interface';
 
 const createAFavourite = async (
   payload: Record<string, any>,
@@ -32,6 +32,17 @@ const createAFavourite = async (
     if (!existingUser) {
       throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
     }
+  }
+
+  const existingFavourite = await prisma.favouriteBiodata.findFirst({
+    where: {
+      biodataId,
+      userId,
+    },
+  });
+
+  if (existingFavourite) {
+    throw new ApiError(httpStatus.CONFLICT, 'Already in your favourite list');
   }
 
   // Create new Favourite
@@ -109,25 +120,34 @@ const getFilteredFavourite = async (
   };
 };
 
-const getAFavourite = async (FavouriteId: string) => {
-  const result = await prisma.favouriteBiodata.findUniqueOrThrow({
+const getAFavourite = async (biodataId: string, userId: string) => {
+  const result = await prisma.favouriteBiodata.findFirst({
     where: {
-      id: FavouriteId,
+      biodataId: biodataId,
+      userId,
     },
   });
-
+  if (!result) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Favourite not found');
+  }
   return result;
 };
 
 const deleteAFavourite = async (
   FavouriteId: string,
+  userId: string,
 ): Promise<FavouriteBiodata> => {
-  await prisma.favouriteBiodata.findFirstOrThrow({
+  console.log(FavouriteId, 'FavouriteId');
+  const existingFavourite = await prisma.favouriteBiodata.findFirst({
     where: {
       id: FavouriteId,
+      userId,
     },
   });
 
+  if (!existingFavourite) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Favourite not found');
+  }
   const result = await prisma.favouriteBiodata.delete({
     where: {
       id: FavouriteId,
