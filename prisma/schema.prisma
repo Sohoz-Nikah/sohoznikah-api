@@ -322,10 +322,11 @@ model BiodataReligiousInfo {
     hasQazaPrayers                String?
     canReciteQuranProperly        String
     avoidsHaramIncome             String?
-    modestDressing                String?
     followsMahramRules            String?
     beliefAboutPirMurshidAndMazar String?
     practicingSince               String?
+    modestDressing                String?
+    veilWithNiqab                 String?
     createdBy                     String?
     createdAt                     DateTime  @default(now())
     updatedBy                     String?

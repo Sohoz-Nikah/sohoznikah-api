@@ -34,6 +34,17 @@ const createAShortlist = async (
     }
   }
 
+  const existingShortlist = await prisma.shortlistBiodata.findFirst({
+    where: {
+      biodataId,
+      userId,
+    },
+  });
+
+  if (existingShortlist) {
+    throw new ApiError(httpStatus.CONFLICT, 'Already in your short list');
+  }
+
   // Create new Shortlist
   const newShortlist = await prisma.shortlistBiodata.create({
     data: {

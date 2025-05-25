@@ -27,12 +27,13 @@ import { BiodataFormData, IBiodataFilterRequest } from './biodata.interface';
 // Helper function to handle biodata creation/update
 async function handleBiodataOperation(
   biodataId: string | null,
-  formData: BiodataFormData,
+  formData: BiodataFormData & { visibility?: string },
   userId: string,
   isAdmin: boolean = false,
 ): Promise<Biodata> {
   return await prisma.$transaction(async tx => {
     let biodata: Biodata;
+    console.log('formData', formData);
 
     if (!biodataId) {
       biodata = await tx.biodata.create({
@@ -51,7 +52,14 @@ async function handleBiodataOperation(
         },
       });
     }
-
+    if (formData?.visibility) {
+      await tx.biodata.update({
+        where: { id: biodata?.id },
+        data: {
+          visibility: formData.visibility as VisibilityStatus,
+        },
+      });
+    }
     // Handle related records
     await handleRelatedRecords(tx, biodata.id, formData, userId);
 
@@ -756,7 +764,14 @@ const getMyBiodata = async (userId: string) => {
     },
   });
 
-  return biodata;
+  const user = await prisma.user.findFirst({
+    where: { id: userId },
+  });
+  // console.log('user', user);
+  return {
+    ...biodata,
+    token: user?.token,
+  };
 };
 
 const updateMyBiodata = async (

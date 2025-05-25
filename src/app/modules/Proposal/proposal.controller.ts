@@ -16,7 +16,7 @@ const createAProposal = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     success: true,
     statusCode: httpStatus.CREATED,
-    message: 'Added to Proposal successfully',
+    message: 'Proposal sent successfully!',
     data: result,
   });
 });
