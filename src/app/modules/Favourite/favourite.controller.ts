@@ -13,12 +13,21 @@ const createAFavourite = catchAsync(async (req: Request, res: Response) => {
     req.user as JwtPayload,
   );
 
-  sendResponse(res, {
-    success: true,
-    statusCode: httpStatus.CREATED,
-    message: 'Added to Favourite successfully',
-    data: result,
-  });
+  if (result) {
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.CREATED,
+      message: 'Added to Favourite successfully',
+      data: result,
+    });
+  } else {
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: 'Deleted from Favourite successfully',
+      data: null,
+    });
+  }
 });
 
 const getFilteredFavourite = catchAsync(async (req: Request, res: Response) => {

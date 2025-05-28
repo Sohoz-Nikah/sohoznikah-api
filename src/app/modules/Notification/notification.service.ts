@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Notification, Prisma } from '@prisma/client';
-import prisma from '../../shared/prisma';
-import { INotificationFilterRequest } from './notification.interface';
-import { IPaginationOptions } from '../../interface/iPaginationOptions';
-import { paginationHelpers } from '../../helper/paginationHelper';
-import { NotificationSearchAbleFields } from './notification.constant';
-import ApiError from '../../errors/ApiError';
+import { Notification, Prisma, UserRole } from '@prisma/client';
 import httpStatus from 'http-status';
 import { JwtPayload } from 'jsonwebtoken';
+import ApiError from '../../errors/ApiError';
+import { paginationHelpers } from '../../helper/paginationHelper';
+import { IPaginationOptions } from '../../interface/iPaginationOptions';
+import prisma from '../../shared/prisma';
+import { NotificationSearchAbleFields } from './notification.constant';
+import { INotificationFilterRequest } from './notification.interface';
 
 const createANotification = async (
   req: Record<string, any>,
@@ -44,10 +44,21 @@ const createANotification = async (
 const getFilteredNotification = async (
   filters: INotificationFilterRequest,
   options: IPaginationOptions,
+  user: JwtPayload,
 ) => {
+  const { userId, role } = user;
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
   const { searchTerm, ...filterData } = filters;
-  const andConditions = [];
+
+  const andConditions: Prisma.NotificationWhereInput[] = [];
+
+  // Role-based filtering
+  if (role === UserRole.USER) {
+    andConditions.push({
+      OR: [{ userId: { equals: userId } }, { isGlobal: { equals: true } }],
+    });
+  }
+  // SUPER_ADMIN can see all notifications, no additional conditions needed
 
   if (searchTerm) {
     andConditions.push({
@@ -101,7 +112,7 @@ const getFilteredNotification = async (
       limit,
       total,
     },
-    data: result, // Return mapped data
+    data: result,
   };
 };
 

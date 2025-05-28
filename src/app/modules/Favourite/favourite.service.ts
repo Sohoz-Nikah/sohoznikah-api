@@ -12,7 +12,7 @@ import { IFavouriteFilterRequest } from './favourite.interface';
 const createAFavourite = async (
   payload: Record<string, any>,
   user: JwtPayload,
-): Promise<FavouriteBiodata> => {
+): Promise<FavouriteBiodata | null> => {
   const { biodataId } = payload;
   const { userId } = user;
   if (biodataId) {
@@ -42,7 +42,12 @@ const createAFavourite = async (
   });
 
   if (existingFavourite) {
-    throw new ApiError(httpStatus.CONFLICT, 'Already in your favourite list');
+    await prisma.favouriteBiodata.delete({
+      where: {
+        id: existingFavourite.id,
+      },
+    });
+    return null;
   }
 
   // Create new Favourite

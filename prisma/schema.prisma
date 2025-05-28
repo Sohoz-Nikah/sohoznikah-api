@@ -326,7 +326,6 @@ model BiodataReligiousInfo {
     beliefAboutPirMurshidAndMazar String?
     practicingSince               String?
     modestDressing                String?
-    veilWithNiqab                 String?
     createdBy                     String?
     createdAt                     DateTime  @default(now())
     updatedBy                     String?
@@ -525,6 +524,16 @@ model Notification {
     biodata  Biodata?  @relation(fields: [biodataId], references: [id], onDelete: Cascade)
     proposal Proposal? @relation(fields: [proposalId], references: [id], onDelete: Cascade)
 }
+
+// enum NotificationType {
+//     UPDATE_BIODATA
+//     NEW_BIODATA
+//     DELETE_BIODATA
+//     PROPOSAL_ACCEPTED
+//     PROPOSAL_REJECTED
+//     PROPOSAL_NEED_TIME
+//     PROPOSAL_TOKEN_WITHDRAWN
+// }
 
 /**
  * ===================  biodata change log  ====================

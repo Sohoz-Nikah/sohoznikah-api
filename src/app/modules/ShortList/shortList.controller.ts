@@ -24,7 +24,11 @@ const createAShortlist = catchAsync(async (req: Request, res: Response) => {
 const getFilteredShortlist = catchAsync(async (req: Request, res: Response) => {
   const filters = pick(req.query, ShortlistFilterableFields);
   const options = pick(req.query, ['limit', 'page', 'sortBy', 'sortOrder']);
-  const result = await ShortlistServices.getFilteredShortlist(filters, options);
+  const result = await ShortlistServices.getFilteredShortlist(
+    filters,
+    options,
+    req.user as JwtPayload,
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

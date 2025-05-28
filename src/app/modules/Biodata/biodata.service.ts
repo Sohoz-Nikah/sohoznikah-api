@@ -243,7 +243,7 @@ async function handleRelatedRecords(
     });
   }
   // Handle Address Info (Multiple Records)
-  if (addressInfoFormData?.addresses?.length) {
+  if (addressInfoFormData && addressInfoFormData?.addresses?.length > 0) {
     await tx.biodataAddressInfo.deleteMany({ where: { biodataId } });
     await tx.biodataAddressInfo.createMany({
       data: addressInfoFormData.addresses.map(address => ({
@@ -259,8 +259,6 @@ async function handleRelatedRecords(
         createdBy: userId,
       })),
     });
-  } else {
-    await tx.biodataAddressInfo.deleteMany({ where: { biodataId } });
   }
 
   // Handle Education Info (Single Record)
@@ -301,8 +299,6 @@ async function handleRelatedRecords(
           createdBy: userId,
         })),
       });
-    } else {
-      await tx.biodataEducationInfoDegree.deleteMany({ where: { biodataId } });
     }
   }
 
@@ -611,7 +607,6 @@ const createABiodata = async (
   req: Record<string, any>,
   creator: string,
 ): Promise<Biodata> => {
-  console.log('req.body', req.body);
   return handleBiodataOperation(null, req.body, creator);
 };
 
@@ -654,7 +649,7 @@ export const getFilteredBiodata = async (
 
   // 5) numeric ranges:
   const rangeClauses = buildRangeConditions(filters, rangeConfigs);
-  console.log('rangeClauses', rangeClauses);
+  // console.log('rangeClauses', rangeClauses);
   and.push(...rangeClauses);
 
   // 6) the rest of your filters:
