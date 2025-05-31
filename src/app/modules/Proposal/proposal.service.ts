@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Prisma, Proposal } from '@prisma/client';
+import { Prisma, Proposal, UserRole } from '@prisma/client';
 import { addHours } from 'date-fns';
 import httpStatus from 'http-status';
 import { JwtPayload } from 'jsonwebtoken';
@@ -98,7 +98,6 @@ const getFilteredProposal = async (
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
   const { searchTerm, type, status, ...filterData } = filters;
   const andConditions: Prisma.ProposalWhereInput[] = [];
-  console.log(filters, options, userId, role);
   // Search term
   if (searchTerm) {
     andConditions.push({
@@ -152,6 +151,14 @@ const getFilteredProposal = async (
     where: whereConditions,
     skip,
     take: limit,
+    include: {
+      // user: true,
+      biodata: {
+        include: {
+          addressInfoFormData: true,
+        },
+      }, // Include related data
+    },
     orderBy:
       options.sortBy && options.sortOrder
         ? {
@@ -162,8 +169,41 @@ const getFilteredProposal = async (
           },
   });
 
+  // console.log(result);
+
   const total = await prisma.proposal.count({
     where: whereConditions,
+  });
+
+  const proposalData = result.map(proposal => {
+    const currentAddress = proposal?.biodata?.addressInfoFormData?.find(
+      item => item.type === 'current_address',
+    );
+
+    const permanentAddresses = proposal?.biodata?.addressInfoFormData?.find(
+      item => item.type === 'permanent_address',
+    );
+
+    return {
+      id: proposal.id,
+      senderId: proposal.senderId,
+      receiverId: proposal.receiverId,
+      biodataId: proposal.biodataId,
+      bioNo: proposal?.biodata?.code,
+      bioVisibility: proposal?.biodata?.visibility,
+      bioPresentCity: currentAddress?.city,
+      bioPresentState: currentAddress?.state,
+      bioPermanentCity: permanentAddresses?.city,
+      bioPermanentState: permanentAddresses?.state,
+      createdAt: proposal?.createdAt,
+      respondedAt: proposal?.respondedAt,
+      isDeleted: proposal?.isDeleted,
+      tokenSpent: proposal?.tokenSpent,
+      expiredAt: proposal?.expiredAt,
+      isCancelled: proposal?.isCancelled,
+      status: proposal?.status,
+      tokenRefunded: proposal?.tokenRefunded,
+    };
   });
 
   return {
@@ -172,7 +212,7 @@ const getFilteredProposal = async (
       limit,
       total,
     },
-    data: result,
+    data: proposalData,
   };
 };
 
@@ -199,45 +239,106 @@ const getAProposal = async (ProposalId: string, user: JwtPayload) => {
   return result;
 };
 
-// const updateProposalResponse = async (
-//   proposalId: string,
-//   payload: Record<string, any>,
-//   user: JwtPayload,
-// ) => {
-//   const { userId } = user;
-//   const proposal = await prisma.proposal.findUnique({
-//     where: { id: proposalId, receiverId: userId },
-//   });
+const cancelProposal = async (proposalId: string, user: JwtPayload) => {
+  const { userId, role } = user;
 
-//   if (!proposal) throw new ApiError(httpStatus.NOT_FOUND, 'Proposal not found');
+  if (role === UserRole.SUPER_ADMIN || role === UserRole.ADMIN) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'You are not allowed to cancel proposal',
+    );
+  }
 
-//   if (response === 'NEED_TIME') {
-//     return prisma.proposal.update({
-//       where: { id: proposalId },
-//       data: {
-//         status: 'NEED_TIME',
-//         expireAt: addHours(new Date(), 72),
-//       },
-//     });
-//   }
+  const proposal = await prisma.proposal.findUnique({
+    where: { id: proposalId, senderId: userId },
+  });
 
-//   return prisma.proposal.update({
-//     where: { id: proposalId },
-//     data: {
-//       status: response,
-//       respondedAt: new Date(),
-//     },
-//   });
-// };
+  if (!proposal) throw new ApiError(httpStatus.NOT_FOUND, 'Proposal not found');
 
-const deleteAProposal = async (ProposalId: string): Promise<Proposal> => {
-  await prisma.proposal.findFirstOrThrow({
+  if (proposal.expiredAt > new Date()) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'You cannot cancel proposal before 72 hours',
+    );
+  }
+
+  return prisma.proposal.update({
+    where: { id: proposalId, senderId: userId },
+    data: { isCancelled: true },
+  });
+};
+
+const updateProposalResponse = async (
+  proposalId: string,
+  payload: Record<string, any>,
+  user: JwtPayload,
+) => {
+  const { userId } = user;
+  const proposal = await prisma.proposal.findUnique({
+    where: { id: proposalId, receiverId: userId },
+  });
+
+  if (!proposal) throw new ApiError(httpStatus.NOT_FOUND, 'Proposal not found');
+
+  if (payload.response === 'NEED_TIME') {
+    return prisma.proposal.update({
+      where: { id: proposalId },
+      data: {
+        status: 'NEED_TIME',
+        expiredAt: addHours(new Date(), 72),
+      },
+    });
+  }
+
+  return prisma.proposal.update({
+    where: { id: proposalId },
+    data: {
+      status: payload.response,
+      respondedAt: new Date(),
+    },
+  });
+};
+
+const deleteAProposal = async (
+  ProposalId: string,
+  user: JwtPayload,
+): Promise<Proposal> => {
+  const { userId, role } = user;
+  const proposal = await prisma.proposal.findFirstOrThrow({
     where: {
       id: ProposalId,
     },
   });
 
-  const result = await prisma.proposal.delete({
+  let result;
+  if (role === UserRole.USER) {
+    if (proposal.senderId !== userId) {
+      throw new ApiError(
+        httpStatus.FORBIDDEN,
+        'You are not allowed to delete this proposal',
+      );
+    }
+
+    result = await prisma.proposal.delete({
+      where: {
+        id: ProposalId,
+        senderId: userId,
+      },
+    });
+
+    return result;
+  }
+
+  // if (role === UserRole.ADMIN) {
+  //   if (proposal.senderId !== userId) {
+  //     throw new ApiError(
+  //       httpStatus.FORBIDDEN,
+  //       'You are not allowed to delete this proposal',
+  //     );
+  //   }
+  // }
+
+  result = await prisma.proposal.delete({
     where: {
       id: ProposalId,
     },
@@ -250,6 +351,7 @@ export const ProposalServices = {
   createAProposal,
   getFilteredProposal,
   getAProposal,
-  // updateProposalResponse,
+  cancelProposal,
+  updateProposalResponse,
   deleteAProposal,
 };

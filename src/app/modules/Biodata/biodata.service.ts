@@ -679,6 +679,7 @@ export const getFilteredBiodata = async (
         familyInfoFormData: true,
         religiousInfoFormData: true,
         personalInfoFormData: true,
+        favouriteBiodata: true,
       },
       orderBy:
         options.sortBy && options.sortOrder
@@ -702,6 +703,7 @@ export const getFilteredBiodata = async (
     profilePic: b.profilePic,
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
+    isFavourite: b.favouriteBiodata,
   }));
 
   return {

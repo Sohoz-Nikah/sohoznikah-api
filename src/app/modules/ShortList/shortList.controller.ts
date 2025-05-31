@@ -53,10 +53,12 @@ const getAShortlist = catchAsync(async (req: Request, res: Response) => {
 });
 
 const deleteAShortlist = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as JwtPayload;
   const { id: ShortlistId } = req.params;
 
-  const result = await ShortlistServices.deleteAShortlist(ShortlistId, user.id);
+  const result = await ShortlistServices.deleteAShortlist(
+    ShortlistId,
+    req.user as JwtPayload,
+  );
 
   if (result) {
     sendResponse(res, {

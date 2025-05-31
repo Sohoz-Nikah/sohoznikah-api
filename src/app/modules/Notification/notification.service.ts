@@ -120,19 +120,9 @@ const getANotification = async (NotificationId: string, userId: JwtPayload) => {
   const result = await prisma.notification.findUniqueOrThrow({
     where: {
       id: NotificationId,
+      OR: [{ userId: { equals: userId.id } }, { isGlobal: { equals: true } }],
     },
   });
-
-  if (userId && userId.id !== result.userId) {
-    await prisma.notification.update({
-      where: {
-        id: NotificationId,
-      },
-      data: {
-        isRead: true,
-      },
-    });
-  }
 
   return result;
 };
@@ -140,8 +130,10 @@ const getANotification = async (NotificationId: string, userId: JwtPayload) => {
 const updateANotification = async (
   NotificationId: string,
   data: Partial<Notification>,
+  user: JwtPayload,
 ): Promise<Notification> => {
   // Check if the Notification exists
+  const { role } = user;
   const existingNotification = await prisma.notification.findUnique({
     where: { id: NotificationId },
   });
@@ -171,11 +163,20 @@ const updateANotification = async (
     }
   }
 
-  // Update the Notification
-  const updatedNotification = await prisma.notification.update({
-    where: { id: NotificationId },
-    data,
-  });
+  let updatedNotification;
+  if (role === UserRole.USER) {
+    updatedNotification = await prisma.notification.update({
+      where: { id: NotificationId },
+      data: {
+        isRead: true,
+      },
+    });
+  } else {
+    updatedNotification = await prisma.notification.update({
+      where: { id: NotificationId },
+      data,
+    });
+  }
 
   return updatedNotification;
 };

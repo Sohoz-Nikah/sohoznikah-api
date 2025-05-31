@@ -53,10 +53,12 @@ const getANotification = catchAsync(async (req: Request, res: Response) => {
 
 const updateANotification = catchAsync(async (req: Request, res: Response) => {
   const { id: NotificationId } = req.params;
-
+  const { userId } = req.user as JwtPayload;
+  console.log(userId);
   const result = await NotificationServices.updateANotification(
     NotificationId,
     req.body,
+    req.user as JwtPayload,
   );
 
   sendResponse(res, {

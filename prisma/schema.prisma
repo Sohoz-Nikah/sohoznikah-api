@@ -72,6 +72,7 @@ model User {
     gurdianContactCreated       BiodataPrimaryInfoGuardianContact[] @relation("GuardianContactInfoCreatedBy")
     gurdianContactUpdated       BiodataPrimaryInfoGuardianContact[] @relation("GuardianContactInfoUpdatedBy")
     Notification                Notification[]
+    Token                       Token[]
 
     @@index([email])
     @@index([phoneNumber])
@@ -434,10 +435,11 @@ model BiodataPrimaryInfoGuardianContact {
  */
 
 model FavouriteBiodata {
-    id        String   @id @default(uuid())
-    userId    String
-    biodataId String
-    createdAt DateTime @default(now())
+    id            String   @id @default(uuid())
+    userId        String
+    biodataId     String
+    isShortlisted Boolean  @default(false)
+    createdAt     DateTime @default(now())
 
     user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
     biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
@@ -464,16 +466,18 @@ model ShortlistBiodata {
  * =========================  Proposal  =============================
  */
 model Proposal {
-    id          String         @id @default(uuid())
-    senderId    String
-    receiverId  String
-    biodataId   String
-    status      ProposalStatus @default(PENDING)
-    createdAt   DateTime       @default(now())
-    respondedAt DateTime?
-    isDeleted   Boolean        @default(false)
-    tokenSpent  Boolean        @default(true)
-    expiredAt   DateTime // ⏰ For 72 hour limit
+    id            String         @id @default(uuid())
+    senderId      String
+    receiverId    String
+    biodataId     String
+    status        ProposalStatus @default(PENDING)
+    createdAt     DateTime       @default(now())
+    respondedAt   DateTime?
+    isDeleted     Boolean        @default(false)
+    tokenSpent    Boolean        @default(true)
+    expiredAt     DateTime // ⏰ For 72 hour limit 
+    isCancelled   Boolean        @default(false)
+    tokenRefunded Boolean        @default(false)
 
     sender       User           @relation("SentProposals", fields: [senderId], references: [id])
     receiver     User           @relation("ReceivedProposals", fields: [receiverId], references: [id])
@@ -534,6 +538,41 @@ model Notification {
 //     PROPOSAL_NEED_TIME
 //     PROPOSAL_TOKEN_WITHDRAWN
 // }
+
+/**
+ * ===================  token  ====================
+ */
+
+model Token {
+    id String @id @default(uuid())
+
+    userId      String
+    tokenType   TokenType
+    quantity    Int
+    totalPrice  Int
+    tokenStatus TokenStatus @default(REQUESTED)
+
+    phoneNumber   String? // e.g., "Bkash", "Rocket", "Nagad"
+    transactionId String? // e.g., "1234567890"
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum TokenType {
+    CUSTOM
+    BUNDLE1
+    BUNDLE2
+    BUNDLE3
+}
+
+enum TokenStatus {
+    REQUESTED
+    APPROVED
+    REJECTED
+}
 
 /**
  * ===================  biodata change log  ====================

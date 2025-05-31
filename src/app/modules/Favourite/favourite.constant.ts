@@ -1,3 +1,7 @@
 export const FavouriteSearchAbleFields: string[] = ['name'];
 
-export const FavouriteFilterableFields: string[] = ['searchTerm'];
+export const FavouriteFilterableFields: string[] = [
+  'searchTerm',
+  'type',
+  'status',
+];

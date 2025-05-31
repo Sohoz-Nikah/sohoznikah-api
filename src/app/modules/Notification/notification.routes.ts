@@ -1,9 +1,9 @@
+import { UserRole } from '@prisma/client';
 import express from 'express';
 import auth from '../../middlewares/auth';
 import validateRequest from '../../middlewares/validateRequest';
-import { NotificationValidation } from './notification.validation';
 import { NotificationControllers } from './notification.controller';
-import { UserRole } from '@prisma/client';
+import { NotificationValidation } from './notification.validation';
 
 const router = express.Router();
 
@@ -28,14 +28,14 @@ router.get(
 
 router.patch(
   '/:id',
-  auth([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
+  auth([UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.USER]),
   validateRequest(NotificationValidation.updateNotificationValidationSchema),
   NotificationControllers.updateANotification,
 );
 
 router.delete(
   '/:id',
-  auth([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
+  auth([UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.USER]),
   NotificationControllers.deleteANotification,
 );
 
