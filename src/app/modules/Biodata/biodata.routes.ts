@@ -31,6 +31,12 @@ router.patch(
   BiodataControllers.updateMyBiodata,
 );
 
+router.post(
+  '/delete-request',
+  auth([UserRole.USER]),
+  BiodataControllers.deleteABiodataRequest,
+);
+
 router.get('/:id', BiodataControllers.getABiodata);
 
 router.patch(
@@ -42,7 +48,7 @@ router.patch(
 
 router.delete(
   '/:id',
-  auth([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
+  auth([UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.USER]),
   BiodataControllers.deleteABiodata,
 );
 

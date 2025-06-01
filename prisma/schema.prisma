@@ -28,6 +28,9 @@ model User {
     createdAt              DateTime  @default(now())
     updatedBy              String?
     updatedAt              DateTime?
+    bioDeleteReason        String?
+    bkashNumber            String?
+    spouseBiodata          String?
 
     otp       Int?
     otpExpiry DateTime?
@@ -41,7 +44,6 @@ model User {
     shortlistBiodata            ShortlistBiodata[]
     sentProposals               Proposal[]                          @relation("SentProposals")
     receivedProposals           Proposal[]                          @relation("ReceivedProposals")
-    contactAccess               ContactAccess[]
     biodatas                    Biodata?                            @relation("CreatedBiodataUser")
     biodatasCreated             Biodata[]                           @relation("BiodataCreatedBy")
     biodatasUpdated             Biodata[]                           @relation("BiodataUpdatedBy")
@@ -73,6 +75,8 @@ model User {
     gurdianContactUpdated       BiodataPrimaryInfoGuardianContact[] @relation("GuardianContactInfoUpdatedBy")
     Notification                Notification[]
     Token                       Token[]
+    ContactAccessSender         ContactAccess[]                     @relation("ContactAccessSender")
+    ContactAccessReceiver       ContactAccess[]                     @relation("ContactAccessReceiver")
 
     @@index([email])
     @@index([phoneNumber])
@@ -475,9 +479,9 @@ model Proposal {
     respondedAt   DateTime?
     isDeleted     Boolean        @default(false)
     tokenSpent    Boolean        @default(true)
-    expiredAt     DateTime // ⏰ For 72 hour limit 
-    isCancelled   Boolean        @default(false)
     tokenRefunded Boolean        @default(false)
+    isCancelled   Boolean        @default(false)
+    expiredAt     DateTime // ⏰ For 72 hour limit 
 
     sender       User           @relation("SentProposals", fields: [senderId], references: [id])
     receiver     User           @relation("ReceivedProposals", fields: [receiverId], references: [id])
@@ -497,16 +501,30 @@ enum ProposalStatus {
  * =========================  Contact Access =============================
  */
 model ContactAccess {
-    id        String   @id @default(uuid())
-    userId    String
-    biodataId String
-    createdAt DateTime @default(now())
-    isDeleted Boolean  @default(false)
+    id               String        @id @default(uuid())
+    senderId         String
+    receiverId       String
+    biodataId        String
+    tokenSpent       Boolean       @default(true)
+    tokenRefunded    Boolean       @default(false)
+    contactStatus    ContactStatus @default(PENDING)
+    contactExpiredAt DateTime?
+    respondedAt      DateTime?
+    createdAt        DateTime      @default(now())
+    isDeleted        Boolean       @default(false)
 
-    user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-    biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+    sender       User           @relation("ContactAccessSender", fields: [senderId], references: [id])
+    receiver     User           @relation("ContactAccessReceiver", fields: [receiverId], references: [id])
+    biodata      Biodata        @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+    Notification Notification[]
 
-    @@unique([userId, biodataId])
+    @@unique([senderId, receiverId, biodataId])
+}
+
+enum ContactStatus {
+    PENDING
+    ACCEPTED
+    REJECTED
 }
 
 /**
@@ -514,19 +532,21 @@ model ContactAccess {
  */
 
 model Notification {
-    id         String   @id @default(uuid())
-    type       String // e.g., "BIODATA_UPDATE", "NEW_BIODATA"
-    message    String
-    userId     String
-    biodataId  String?
-    proposalId String?
-    isGlobal   Boolean  @default(false)
-    isRead     Boolean  @default(false)
-    createdAt  DateTime @default(now())
+    id              String   @id @default(uuid())
+    type            String // e.g., "BIODATA_UPDATE", "NEW_BIODATA"
+    message         String
+    userId          String
+    biodataId       String?
+    proposalId      String?
+    contactAccessId String?
+    isGlobal        Boolean  @default(false)
+    isRead          Boolean  @default(false)
+    createdAt       DateTime @default(now())
 
-    user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-    biodata  Biodata?  @relation(fields: [biodataId], references: [id], onDelete: Cascade)
-    proposal Proposal? @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+    user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+    biodata       Biodata?       @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+    proposal      Proposal?      @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+    contactAccess ContactAccess? @relation(fields: [contactAccessId], references: [id], onDelete: Cascade)
 }
 
 // enum NotificationType {

@@ -4,9 +4,11 @@ import {
   BiodataStatus,
   BioDataType,
   Prisma,
+  UserRole,
   VisibilityStatus,
 } from '@prisma/client';
 import httpStatus from 'http-status';
+import { JwtPayload } from 'jsonwebtoken';
 import ApiError from '../../errors/ApiError';
 import { paginationHelpers } from '../../helper/paginationHelper';
 import { IPaginationOptions } from '../../interface/iPaginationOptions';
@@ -826,9 +828,103 @@ const updateBiodataByAdmin = async (
   return handleBiodataOperation(biodataId, payload, updater, true);
 };
 
-const deleteABiodata = async (biodataId: string): Promise<Biodata> => {
-  await prisma.biodata.findFirstOrThrow({ where: { id: biodataId } });
-  return prisma.biodata.delete({ where: { id: biodataId } });
+const deleteABiodataRequest = async (
+  payload: Record<string, any>,
+  userId: string,
+): Promise<Biodata | null> => {
+  const biodata = await prisma.biodata.findFirst({
+    where: { id: payload?.biodataId, userId },
+  });
+
+  if (!biodata) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Biodata not found');
+  }
+
+  const updatedBiodata = await prisma.biodata.update({
+    where: { id: payload?.id },
+    data: {
+      status: BiodataStatus.DELETE_REQUESTED,
+      visibility: VisibilityStatus.PRIVATE,
+    },
+  });
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      bioDeleteReason: payload.bioDeleteReason,
+      bkashNumber: payload.bkashNumber || null,
+      spouseBiodata: payload.spouseBiodata || null,
+    },
+  });
+
+  await prisma.notification.create({
+    data: {
+      type: 'BIO_DELETE_REQUESTED',
+      message: `Biodata delete request by user ID: ${userId}`,
+      userId,
+      biodataId: payload?.biodataId,
+    },
+  });
+
+  return null;
+};
+
+const deleteABiodata = async (
+  biodataId: string,
+  user: JwtPayload,
+): Promise<Biodata | null> => {
+  const { userId, role } = user;
+
+  const biodata = await prisma.biodata.findFirst({
+    where: { id: biodataId, userId },
+  });
+
+  if (!biodata) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Biodata not found');
+  }
+
+  if (role === UserRole.USER) {
+    if (biodata.userId !== userId) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        'You are not authorized to delete this biodata',
+      );
+    }
+
+    await prisma.biodata.update({
+      where: { id: biodataId },
+      data: {
+        status: BiodataStatus.DELETE_REQUESTED,
+        visibility: VisibilityStatus.PRIVATE,
+      },
+    });
+
+    await prisma.notification.create({
+      data: {
+        type: 'BIO_DELETE_REQUESTED',
+        message: `Biodata delete request by user ID: ${userId}`,
+        userId,
+        biodataId,
+      },
+    });
+
+    return null;
+  } else {
+    await prisma.notification.create({
+      data: {
+        type: 'BIO_DELETE_SUCCESS',
+        message: `Biodata has been deleted successfully.`,
+        userId: biodata.userId,
+        biodataId,
+      },
+    });
+
+    await prisma.biodata.delete({
+      where: { id: biodataId },
+    });
+
+    return biodata;
+  }
 };
 
 export const BiodataServices = {
@@ -838,5 +934,6 @@ export const BiodataServices = {
   getMyBiodata,
   updateMyBiodata,
   updateBiodataByAdmin,
+  deleteABiodataRequest,
   deleteABiodata,
 };
