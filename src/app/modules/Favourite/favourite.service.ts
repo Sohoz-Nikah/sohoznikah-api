@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { FavouriteBiodata, Prisma } from '@prisma/client';
+import { FavouriteBiodata, Prisma, UserRole } from '@prisma/client';
 import httpStatus from 'http-status';
 import { JwtPayload } from 'jsonwebtoken';
 import ApiError from '../../errors/ApiError';
@@ -12,7 +12,7 @@ import { IFavouriteFilterRequest } from './favourite.interface';
 const createAFavourite = async (
   payload: Record<string, any>,
   user: JwtPayload,
-): Promise<FavouriteBiodata> => {
+): Promise<FavouriteBiodata | null> => {
   const { biodataId } = payload;
   const { userId } = user;
   if (biodataId) {
@@ -42,7 +42,12 @@ const createAFavourite = async (
   });
 
   if (existingFavourite) {
-    throw new ApiError(httpStatus.CONFLICT, 'Already in your favourite list');
+    await prisma.favouriteBiodata.delete({
+      where: {
+        id: existingFavourite.id,
+      },
+    });
+    return null;
   }
 
   // Create new Favourite
@@ -59,10 +64,13 @@ const createAFavourite = async (
 const getFilteredFavourite = async (
   filters: IFavouriteFilterRequest,
   options: IPaginationOptions,
+  user: JwtPayload,
 ) => {
+  const { userId, role } = user;
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
-  const { searchTerm, ...filterData } = filters;
-  const andConditions = [];
+  const { searchTerm, type, ...filterData } = filters;
+
+  const andConditions: Prisma.FavouriteBiodataWhereInput[] = [];
 
   if (searchTerm) {
     andConditions.push({
@@ -75,6 +83,31 @@ const getFilteredFavourite = async (
     });
   }
 
+  if (role === UserRole.USER) {
+    if (type === 'sent') {
+      andConditions.push({ userId: userId });
+    } else if (type === 'received') {
+      andConditions.push({
+        biodata: {
+          userId: userId,
+        },
+      });
+    } else {
+      // Both types
+      andConditions.push({
+        OR: [
+          { userId: userId },
+          {
+            biodata: {
+              userId: userId,
+            },
+          },
+        ],
+      });
+    }
+  }
+
+  // Add additional filters
   if (Object.keys(filterData).length > 0) {
     andConditions.push({
       AND: Object.keys(filterData).map(key => {
@@ -96,18 +129,50 @@ const getFilteredFavourite = async (
     where: whereConditions,
     skip,
     take: limit,
+    include: {
+      // user: true,
+      biodata: {
+        include: {
+          addressInfoFormData: true,
+        },
+      }, // Include related data
+    },
     orderBy:
       options.sortBy && options.sortOrder
         ? {
             [options.sortBy]: options.sortOrder,
           }
         : {
-            id: 'desc',
+            createdAt: 'desc',
           },
   });
 
   const total = await prisma.favouriteBiodata.count({
     where: whereConditions,
+  });
+
+  const favouriteData = result.map(favourite => {
+    const currentAddress = favourite?.biodata?.addressInfoFormData?.find(
+      item => item.type === 'current_address',
+    );
+
+    const permanentAddresses = favourite?.biodata?.addressInfoFormData?.find(
+      item => item.type === 'permanent_address',
+    );
+
+    return {
+      id: favourite.id,
+      userId: favourite.userId,
+      biodataId: favourite.biodataId,
+      bioNo: favourite?.biodata?.code,
+      isShortlisted: favourite?.isShortlisted,
+      bioVisibility: favourite?.biodata?.visibility,
+      bioPresentCity: currentAddress?.city,
+      bioPresentState: currentAddress?.state,
+      bioPermanentCity: permanentAddresses?.city,
+      bioPermanentState: permanentAddresses?.state,
+      createdAt: favourite?.createdAt,
+    };
   });
 
   return {
@@ -116,7 +181,7 @@ const getFilteredFavourite = async (
       limit,
       total,
     },
-    data: result, // Return mapped data
+    data: favouriteData,
   };
 };
 
@@ -135,9 +200,9 @@ const getAFavourite = async (biodataId: string, userId: string) => {
 
 const deleteAFavourite = async (
   FavouriteId: string,
-  userId: string,
+  user: JwtPayload,
 ): Promise<FavouriteBiodata> => {
-  console.log(FavouriteId, 'FavouriteId');
+  const { userId, role } = user;
   const existingFavourite = await prisma.favouriteBiodata.findFirst({
     where: {
       id: FavouriteId,
@@ -148,6 +213,34 @@ const deleteAFavourite = async (
   if (!existingFavourite) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Favourite not found');
   }
+
+  if (role === UserRole.USER) {
+    const shortlistData = await prisma.shortlistBiodata.findFirst({
+      where: {
+        biodataId: existingFavourite?.biodataId,
+        userId,
+      },
+    });
+
+    await prisma.shortlistBiodata.delete({
+      where: {
+        id: shortlistData?.id,
+      },
+    });
+  } else {
+    const shortlistData = await prisma.shortlistBiodata.findFirst({
+      where: {
+        biodataId: existingFavourite?.biodataId,
+      },
+    });
+
+    await prisma.shortlistBiodata.delete({
+      where: {
+        id: shortlistData?.id,
+      },
+    });
+  }
+
   const result = await prisma.favouriteBiodata.delete({
     where: {
       id: FavouriteId,

@@ -2,46 +2,40 @@ import { UserRole } from '@prisma/client';
 import express from 'express';
 import auth from '../../middlewares/auth';
 import validateRequest from '../../middlewares/validateRequest';
-import { ProposalControllers } from './proposal.controller';
-import { ProposalValidation } from './proposal.validation';
+import { ContactControllers } from './contact.controller';
+import { ContactValidation } from './contact.validation';
 
 const router = express.Router();
 
 router.post(
   '/',
   auth([UserRole.USER]),
-  validateRequest(ProposalValidation.createProposalValidationSchema),
-  ProposalControllers.createAProposal,
+  validateRequest(ContactValidation.createContactValidationSchema),
+  ContactControllers.createAContact,
 );
 
 router.get(
   '/',
   auth([UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.USER]),
-  ProposalControllers.getFilteredProposal,
+  ContactControllers.getFilteredContact,
 );
 
 router.get(
   '/:id',
   auth([UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.USER]),
-  ProposalControllers.getAProposal,
-);
-
-router.post(
-  '/:id/cancel',
-  auth([UserRole.USER]),
-  ProposalControllers.cancelProposal,
+  ContactControllers.getAContact,
 );
 
 router.patch(
   '/:id',
   auth([UserRole.USER]),
-  ProposalControllers.updateProposalResponse,
+  ContactControllers.updateContactResponse,
 );
 
 router.delete(
   '/:id',
   auth([UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.USER]),
-  ProposalControllers.deleteAProposal,
+  ContactControllers.deleteAContact,
 );
 
-export const ProposalRoutes = router;
+export const ContactRoutes = router;

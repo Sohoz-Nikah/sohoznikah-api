@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Prisma, Proposal, UserRole } from '@prisma/client';
+import { ContactAccess, ContactStatus, Prisma, UserRole } from '@prisma/client';
 import { addHours } from 'date-fns';
 import httpStatus from 'http-status';
 import { JwtPayload } from 'jsonwebtoken';
@@ -7,13 +7,13 @@ import ApiError from '../../errors/ApiError';
 import { paginationHelpers } from '../../helper/paginationHelper';
 import { IPaginationOptions } from '../../interface/iPaginationOptions';
 import prisma from '../../shared/prisma';
-import { ProposalSearchAbleFields } from './proposal.constant';
-import { IProposalFilterRequest } from './proposal.interface';
+import { ContactSearchAbleFields } from './contact.constant';
+import { IContactFilterRequest } from './contact.interface';
 
-const createAProposal = async (
+const createAContact = async (
   payload: Record<string, any>,
   user: JwtPayload,
-): Promise<Proposal> => {
+): Promise<ContactAccess> => {
   const { biodataId } = payload;
   const { userId } = user;
 
@@ -37,71 +37,74 @@ const createAProposal = async (
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
 
-  // Check if already sent proposal
-  const alreadySent = await prisma.proposal.findFirst({
+  // Check if already sent Contact
+  const alreadySent = await prisma.contactAccess.findFirst({
     where: {
       senderId: userId,
       receiverId: existingBiodata.userId,
       biodataId,
-      status: { in: ['PENDING', 'NEED_TIME'] },
+      contactStatus: { in: ['PENDING'] },
     },
   });
 
   if (alreadySent) {
-    throw new ApiError(httpStatus.CONFLICT, 'You have already sent a proposal');
+    throw new ApiError(
+      httpStatus.CONFLICT,
+      'You have already sent a Contact Request',
+    );
   }
 
-  if (existingUser.token < 1) {
+  if (existingUser.token < 2) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Not enough tokens');
   }
 
   await prisma.user.update({
     where: { id: userId },
-    data: { token: { decrement: 1 } },
+    data: { token: { decrement: 2 } },
   });
 
-  // Create Proposal
-  const newProposal = await prisma.proposal.create({
+  // Create Contact
+  const newContact = await prisma.contactAccess.create({
     data: {
       biodataId,
       senderId: userId,
       receiverId: existingBiodata.userId,
-      expiredAt: addHours(new Date(), 72),
+      contactExpiredAt: addHours(new Date(), 72),
     },
   });
 
-  if (!newProposal) {
+  if (!newContact) {
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
-      'Failed to create proposal',
+      'Failed to create Contact',
     );
   }
   // Optional: Log update
   await prisma.notification.create({
     data: {
-      type: 'Got New Proposal',
-      message: `You have got new proposal from : ${existingUser.name}`,
+      type: 'Got New Contact',
+      message: `You have got new Contact from : ${existingUser.name}`,
       userId: existingBiodata.userId,
-      proposalId: newProposal.id,
+      contactAccessId: newContact.id,
     },
   });
 
-  return newProposal;
+  return newContact;
 };
 
-const getFilteredProposal = async (
-  filters: IProposalFilterRequest,
+const getFilteredContact = async (
+  filters: IContactFilterRequest,
   options: IPaginationOptions,
   user: JwtPayload,
 ) => {
   const { userId, role } = user;
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
   const { searchTerm, type, status, ...filterData } = filters;
-  const andConditions: Prisma.ProposalWhereInput[] = [];
+  const andConditions: Prisma.ContactAccessWhereInput[] = [];
   // Search term
   if (searchTerm) {
     andConditions.push({
-      OR: ProposalSearchAbleFields.map(field => ({
+      OR: ContactSearchAbleFields.map(field => ({
         [field]: {
           contains: searchTerm,
           mode: 'insensitive',
@@ -143,11 +146,11 @@ const getFilteredProposal = async (
     });
   }
 
-  const whereConditions: Prisma.ProposalWhereInput = {
+  const whereConditions: Prisma.ContactAccessWhereInput = {
     AND: andConditions,
   };
 
-  const result = await prisma.proposal.findMany({
+  const result = await prisma.contactAccess.findMany({
     where: whereConditions,
     skip,
     take: limit,
@@ -171,38 +174,37 @@ const getFilteredProposal = async (
 
   // console.log(result);
 
-  const total = await prisma.proposal.count({
+  const total = await prisma.contactAccess.count({
     where: whereConditions,
   });
 
-  const proposalData = result.map(proposal => {
-    const currentAddress = proposal?.biodata?.addressInfoFormData?.find(
+  const ContactData = result.map(Contact => {
+    const currentAddress = Contact?.biodata?.addressInfoFormData?.find(
       item => item.type === 'current_address',
     );
 
-    const permanentAddresses = proposal?.biodata?.addressInfoFormData?.find(
+    const permanentAddresses = Contact?.biodata?.addressInfoFormData?.find(
       item => item.type === 'permanent_address',
     );
 
     return {
-      id: proposal.id,
-      senderId: proposal.senderId,
-      receiverId: proposal.receiverId,
-      biodataId: proposal.biodataId,
-      bioNo: proposal?.biodata?.code,
-      bioVisibility: proposal?.biodata?.visibility,
+      id: Contact.id,
+      senderId: Contact.senderId,
+      receiverId: Contact.receiverId,
+      biodataId: Contact.biodataId,
+      bioNo: Contact?.biodata?.code,
+      bioVisibility: Contact?.biodata?.visibility,
       bioPresentCity: currentAddress?.city,
       bioPresentState: currentAddress?.state,
       bioPermanentCity: permanentAddresses?.city,
       bioPermanentState: permanentAddresses?.state,
-      createdAt: proposal?.createdAt,
-      respondedAt: proposal?.respondedAt,
-      isDeleted: proposal?.isDeleted,
-      tokenSpent: proposal?.tokenSpent,
-      expiredAt: proposal?.expiredAt,
-      isCancelled: proposal?.isCancelled,
-      status: proposal?.status,
-      tokenRefunded: proposal?.tokenRefunded,
+      createdAt: Contact?.createdAt,
+      respondedAt: Contact?.respondedAt,
+      isDeleted: Contact?.isDeleted,
+      tokenSpent: Contact?.tokenSpent,
+      contactExpiredAt: Contact?.contactExpiredAt,
+      contactStatus: Contact?.contactStatus,
+      tokenRefunded: Contact?.tokenRefunded,
     };
   });
 
@@ -212,116 +214,116 @@ const getFilteredProposal = async (
       limit,
       total,
     },
-    data: proposalData,
+    data: ContactData,
   };
 };
 
-const getAProposal = async (ProposalId: string, user: JwtPayload) => {
+const getAContact = async (ContactId: string, user: JwtPayload) => {
   const { userId, role } = user;
-  let result: Proposal | null = null;
+  let result: ContactAccess | null = null;
   if (role === 'USER') {
-    result = await prisma.proposal.findFirst({
+    result = await prisma.contactAccess.findFirst({
       where: {
-        id: ProposalId,
+        id: ContactId,
         OR: [{ senderId: userId }, { receiverId: userId }],
       },
     });
   } else {
-    result = await prisma.proposal.findUnique({
-      where: { id: ProposalId },
+    result = await prisma.contactAccess.findUnique({
+      where: { id: ContactId },
     });
   }
 
   if (!result) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Proposal not found');
+    throw new ApiError(httpStatus.NOT_FOUND, 'Contact not found');
   }
 
   return result;
 };
 
-const cancelProposal = async (proposalId: string, user: JwtPayload) => {
-  const { userId, role } = user;
+// const cancelContact = async (ContactId: string, user: JwtPayload) => {
+//   const { userId, role } = user;
 
-  if (role === UserRole.SUPER_ADMIN || role === UserRole.ADMIN) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      'You are not allowed to cancel proposal',
-    );
-  }
+//   if (role === UserRole.SUPER_ADMIN || role === UserRole.ADMIN) {
+//     throw new ApiError(
+//       httpStatus.BAD_REQUEST,
+//       'You are not allowed to cancel Contact',
+//     );
+//   }
 
-  const proposal = await prisma.proposal.findUnique({
-    where: { id: proposalId, senderId: userId },
-  });
+//   const Contact = await prisma.contactAccess.findUnique({
+//     where: { id: ContactId, senderId: userId },
+//   });
 
-  if (!proposal) throw new ApiError(httpStatus.NOT_FOUND, 'Proposal not found');
+//   if (!Contact) throw new ApiError(httpStatus.NOT_FOUND, 'Contact not found');
 
-  if (proposal.expiredAt > new Date()) {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      'You cannot cancel proposal before 72 hours',
-    );
-  }
+//   if (Contact.contactExpiredAt && Contact.contactExpiredAt > new Date()) {
+//     throw new ApiError(
+//       httpStatus.BAD_REQUEST,
+//       'You cannot cancel Contact before 72 hours',
+//     );
+//   }
 
-  return prisma.proposal.update({
-    where: { id: proposalId, senderId: userId },
-    data: { isCancelled: true },
-  });
-};
+//   return prisma.contactAccess.update({
+//     where: { id: ContactId, senderId: userId },
+//     data: { isCancelled: true },
+//   });
+// };
 
-const updateProposalResponse = async (
-  proposalId: string,
+const updateContactResponse = async (
+  ContactId: string,
   payload: Record<string, any>,
   user: JwtPayload,
 ) => {
   const { userId } = user;
-  const proposal = await prisma.proposal.findUnique({
-    where: { id: proposalId, receiverId: userId },
+  const Contact = await prisma.contactAccess.findUnique({
+    where: { id: ContactId, receiverId: userId },
   });
 
-  if (!proposal) throw new ApiError(httpStatus.NOT_FOUND, 'Proposal not found');
+  if (!Contact) throw new ApiError(httpStatus.NOT_FOUND, 'Contact not found');
 
-  if (payload.response === 'NEED_TIME') {
-    return prisma.proposal.update({
-      where: { id: proposalId },
+  if (payload.response === 'YES') {
+    return prisma.contactAccess.update({
+      where: { id: ContactId },
       data: {
-        status: 'NEED_TIME',
-        expiredAt: addHours(new Date(), 72),
+        contactStatus: ContactStatus.ACCEPTED,
+        respondedAt: new Date(),
+      },
+    });
+  } else {
+    return prisma.contactAccess.update({
+      where: { id: ContactId },
+      data: {
+        contactStatus: ContactStatus.REJECTED,
+        respondedAt: new Date(),
       },
     });
   }
-
-  return prisma.proposal.update({
-    where: { id: proposalId },
-    data: {
-      status: payload.response,
-      respondedAt: new Date(),
-    },
-  });
 };
 
-const deleteAProposal = async (
-  ProposalId: string,
+const deleteAContact = async (
+  ContactId: string,
   user: JwtPayload,
-): Promise<Proposal> => {
+): Promise<ContactAccess> => {
   const { userId, role } = user;
-  const proposal = await prisma.proposal.findFirstOrThrow({
+  const Contact = await prisma.contactAccess.findFirstOrThrow({
     where: {
-      id: ProposalId,
+      id: ContactId,
     },
   });
 
   let result;
   if (role === UserRole.USER) {
-    if (proposal.senderId !== userId) {
+    if (Contact.senderId !== userId) {
       throw new ApiError(
         httpStatus.FORBIDDEN,
-        'You are not allowed to delete this proposal',
+        'You are not allowed to delete this Contact',
       );
     }
 
-    result = await prisma.proposal.delete({
+    result = await prisma.contactAccess.delete({
       where: {
-        id: ProposalId,
+        id: ContactId,
         senderId: userId,
       },
     });
@@ -330,28 +332,27 @@ const deleteAProposal = async (
   }
 
   // if (role === UserRole.ADMIN) {
-  //   if (proposal.senderId !== userId) {
+  //   if (Contact.senderId !== userId) {
   //     throw new ApiError(
   //       httpStatus.FORBIDDEN,
-  //       'You are not allowed to delete this proposal',
+  //       'You are not allowed to delete this Contact',
   //     );
   //   }
   // }
 
-  result = await prisma.proposal.delete({
+  result = await prisma.contactAccess.delete({
     where: {
-      id: ProposalId,
+      id: ContactId,
     },
   });
 
   return result;
 };
 
-export const ProposalServices = {
-  createAProposal,
-  getFilteredProposal,
-  getAProposal,
-  cancelProposal,
-  updateProposalResponse,
-  deleteAProposal,
+export const ContactServices = {
+  createAContact,
+  getFilteredContact,
+  getAContact,
+  updateContactResponse,
+  deleteAContact,
 };

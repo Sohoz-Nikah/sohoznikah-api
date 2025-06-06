@@ -16,7 +16,7 @@ const createAProposal = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     success: true,
     statusCode: httpStatus.CREATED,
-    message: 'Added to Proposal successfully',
+    message: 'Proposal sent successfully!',
     data: result,
   });
 });
@@ -54,28 +54,46 @@ const getAProposal = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-// const updateProposalResponse = catchAsync(
-//   async (req: Request, res: Response) => {
-//     const { id } = req.params;
-//     const result = await ProposalServices.getAProposal(
-//       id,
-//       req.body,
-//       req.user as JwtPayload,
-//     );
+const cancelProposal = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await ProposalServices.cancelProposal(
+    id,
+    req.user as JwtPayload,
+  );
 
-//     sendResponse(res, {
-//       statusCode: httpStatus.OK,
-//       success: true,
-//       message: 'Proposal retrieved successfully',
-//       data: result,
-//     });
-//   },
-// );
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Proposal cancelled successfully',
+    data: result,
+  });
+});
+
+const updateProposalResponse = catchAsync(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const result = await ProposalServices.updateProposalResponse(
+      id,
+      req.body,
+      req.user as JwtPayload,
+    );
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: 'Proposal response updated successfully',
+      data: result,
+    });
+  },
+);
 
 const deleteAProposal = catchAsync(async (req: Request, res: Response) => {
   const { id: ProposalId } = req.params;
 
-  const result = await ProposalServices.deleteAProposal(ProposalId);
+  const result = await ProposalServices.deleteAProposal(
+    ProposalId,
+    req.user as JwtPayload,
+  );
 
   if (result) {
     sendResponse(res, {
@@ -91,6 +109,7 @@ export const ProposalControllers = {
   createAProposal,
   getFilteredProposal,
   getAProposal,
-  // updateProposalResponse,
+  cancelProposal,
+  updateProposalResponse,
   deleteAProposal,
 };

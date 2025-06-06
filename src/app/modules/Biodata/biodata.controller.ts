@@ -89,10 +89,31 @@ const updateBiodataByAdmin = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const deleteABiodataRequest = catchAsync(
+  async (req: Request, res: Response) => {
+    const { userId } = req.user as JwtPayload;
+
+    const result = await BiodataServices.deleteABiodataRequest(
+      req.body,
+      userId,
+    );
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: 'Biodata delete request sent successfully',
+      data: result,
+    });
+  },
+);
+
 const deleteABiodata = catchAsync(async (req: Request, res: Response) => {
   const { id: BiodataId } = req.params;
 
-  const result = await BiodataServices.deleteABiodata(BiodataId);
+  const result = await BiodataServices.deleteABiodata(
+    BiodataId,
+    req.user as JwtPayload,
+  );
 
   if (result) {
     sendResponse(res, {
@@ -111,5 +132,6 @@ export const BiodataControllers = {
   getMyBiodata,
   updateMyBiodata,
   updateBiodataByAdmin,
+  deleteABiodataRequest,
   deleteABiodata,
 };

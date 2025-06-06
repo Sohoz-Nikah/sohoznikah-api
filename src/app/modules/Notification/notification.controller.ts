@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
-import sendResponse from '../../shared/sendResponse';
 import httpStatus from 'http-status';
+import { JwtPayload } from 'jsonwebtoken';
 import catchAsync from '../../shared/catchAsync';
 import pick from '../../shared/pick';
-import { NotificationServices } from './notification.service';
+import sendResponse from '../../shared/sendResponse';
 import { NotificationFilterableFields } from './notification.constant';
-import { JwtPayload } from 'jsonwebtoken';
+import { NotificationServices } from './notification.service';
 
 const createANotification = catchAsync(async (req: Request, res: Response) => {
   const result = await NotificationServices.createANotification(req);
@@ -25,6 +25,7 @@ const getFilteredNotification = catchAsync(
     const result = await NotificationServices.getFilteredNotification(
       filters,
       options,
+      req.user as JwtPayload,
     );
 
     sendResponse(res, {
@@ -52,10 +53,12 @@ const getANotification = catchAsync(async (req: Request, res: Response) => {
 
 const updateANotification = catchAsync(async (req: Request, res: Response) => {
   const { id: NotificationId } = req.params;
-
+  const { userId } = req.user as JwtPayload;
+  console.log(userId);
   const result = await NotificationServices.updateANotification(
     NotificationId,
     req.body,
+    req.user as JwtPayload,
   );
 
   sendResponse(res, {

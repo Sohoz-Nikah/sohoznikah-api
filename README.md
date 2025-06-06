@@ -53,13 +53,13 @@ npm install
 npx prisma generate
 ```
 
-5. **Generate migration:**
+6. **Generate migration:**
 
 ```shell
 npx prisma migrate dev
 ```
 
-5. **Start the Server:**
+7. **Start the Server:**
 
 ```shell
 yarn dev

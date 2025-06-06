@@ -4,9 +4,11 @@ import {
   BiodataStatus,
   BioDataType,
   Prisma,
+  UserRole,
   VisibilityStatus,
 } from '@prisma/client';
 import httpStatus from 'http-status';
+import { JwtPayload } from 'jsonwebtoken';
 import ApiError from '../../errors/ApiError';
 import { paginationHelpers } from '../../helper/paginationHelper';
 import { IPaginationOptions } from '../../interface/iPaginationOptions';
@@ -27,12 +29,13 @@ import { BiodataFormData, IBiodataFilterRequest } from './biodata.interface';
 // Helper function to handle biodata creation/update
 async function handleBiodataOperation(
   biodataId: string | null,
-  formData: BiodataFormData,
+  formData: BiodataFormData & { visibility?: string },
   userId: string,
   isAdmin: boolean = false,
 ): Promise<Biodata> {
   return await prisma.$transaction(async tx => {
     let biodata: Biodata;
+    console.log('formData', formData);
 
     if (!biodataId) {
       biodata = await tx.biodata.create({
@@ -51,7 +54,14 @@ async function handleBiodataOperation(
         },
       });
     }
-
+    if (formData?.visibility) {
+      await tx.biodata.update({
+        where: { id: biodata?.id },
+        data: {
+          visibility: formData.visibility as VisibilityStatus,
+        },
+      });
+    }
     // Handle related records
     await handleRelatedRecords(tx, biodata.id, formData, userId);
 
@@ -235,7 +245,7 @@ async function handleRelatedRecords(
     });
   }
   // Handle Address Info (Multiple Records)
-  if (addressInfoFormData?.addresses?.length) {
+  if (addressInfoFormData && addressInfoFormData?.addresses?.length > 0) {
     await tx.biodataAddressInfo.deleteMany({ where: { biodataId } });
     await tx.biodataAddressInfo.createMany({
       data: addressInfoFormData.addresses.map(address => ({
@@ -251,8 +261,6 @@ async function handleRelatedRecords(
         createdBy: userId,
       })),
     });
-  } else {
-    await tx.biodataAddressInfo.deleteMany({ where: { biodataId } });
   }
 
   // Handle Education Info (Single Record)
@@ -293,8 +301,6 @@ async function handleRelatedRecords(
           createdBy: userId,
         })),
       });
-    } else {
-      await tx.biodataEducationInfoDegree.deleteMany({ where: { biodataId } });
     }
   }
 
@@ -603,7 +609,6 @@ const createABiodata = async (
   req: Record<string, any>,
   creator: string,
 ): Promise<Biodata> => {
-  console.log('req.body', req.body);
   return handleBiodataOperation(null, req.body, creator);
 };
 
@@ -646,7 +651,7 @@ export const getFilteredBiodata = async (
 
   // 5) numeric ranges:
   const rangeClauses = buildRangeConditions(filters, rangeConfigs);
-  console.log('rangeClauses', rangeClauses);
+  // console.log('rangeClauses', rangeClauses);
   and.push(...rangeClauses);
 
   // 6) the rest of your filters:
@@ -676,6 +681,7 @@ export const getFilteredBiodata = async (
         familyInfoFormData: true,
         religiousInfoFormData: true,
         personalInfoFormData: true,
+        favouriteBiodata: true,
       },
       orderBy:
         options.sortBy && options.sortOrder
@@ -699,6 +705,7 @@ export const getFilteredBiodata = async (
     profilePic: b.profilePic,
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
+    isFavourite: b.favouriteBiodata,
   }));
 
   return {
@@ -756,7 +763,14 @@ const getMyBiodata = async (userId: string) => {
     },
   });
 
-  return biodata;
+  const user = await prisma.user.findFirst({
+    where: { id: userId },
+  });
+  // console.log('user', user);
+  return {
+    ...biodata,
+    token: user?.token,
+  };
 };
 
 const updateMyBiodata = async (
@@ -814,9 +828,103 @@ const updateBiodataByAdmin = async (
   return handleBiodataOperation(biodataId, payload, updater, true);
 };
 
-const deleteABiodata = async (biodataId: string): Promise<Biodata> => {
-  await prisma.biodata.findFirstOrThrow({ where: { id: biodataId } });
-  return prisma.biodata.delete({ where: { id: biodataId } });
+const deleteABiodataRequest = async (
+  payload: Record<string, any>,
+  userId: string,
+): Promise<Biodata | null> => {
+  const biodata = await prisma.biodata.findFirst({
+    where: { id: payload?.biodataId, userId },
+  });
+
+  if (!biodata) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Biodata not found');
+  }
+
+  const updatedBiodata = await prisma.biodata.update({
+    where: { id: payload?.id },
+    data: {
+      status: BiodataStatus.DELETE_REQUESTED,
+      visibility: VisibilityStatus.PRIVATE,
+    },
+  });
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      bioDeleteReason: payload.bioDeleteReason,
+      bkashNumber: payload.bkashNumber || null,
+      spouseBiodata: payload.spouseBiodata || null,
+    },
+  });
+
+  await prisma.notification.create({
+    data: {
+      type: 'BIO_DELETE_REQUESTED',
+      message: `Biodata delete request by user ID: ${userId}`,
+      userId,
+      biodataId: payload?.biodataId,
+    },
+  });
+
+  return null;
+};
+
+const deleteABiodata = async (
+  biodataId: string,
+  user: JwtPayload,
+): Promise<Biodata | null> => {
+  const { userId, role } = user;
+
+  const biodata = await prisma.biodata.findFirst({
+    where: { id: biodataId, userId },
+  });
+
+  if (!biodata) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Biodata not found');
+  }
+
+  if (role === UserRole.USER) {
+    if (biodata.userId !== userId) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        'You are not authorized to delete this biodata',
+      );
+    }
+
+    await prisma.biodata.update({
+      where: { id: biodataId },
+      data: {
+        status: BiodataStatus.DELETE_REQUESTED,
+        visibility: VisibilityStatus.PRIVATE,
+      },
+    });
+
+    await prisma.notification.create({
+      data: {
+        type: 'BIO_DELETE_REQUESTED',
+        message: `Biodata delete request by user ID: ${userId}`,
+        userId,
+        biodataId,
+      },
+    });
+
+    return null;
+  } else {
+    await prisma.notification.create({
+      data: {
+        type: 'BIO_DELETE_SUCCESS',
+        message: `Biodata has been deleted successfully.`,
+        userId: biodata.userId,
+        biodataId,
+      },
+    });
+
+    await prisma.biodata.delete({
+      where: { id: biodataId },
+    });
+
+    return biodata;
+  }
 };
 
 export const BiodataServices = {
@@ -826,5 +934,6 @@ export const BiodataServices = {
   getMyBiodata,
   updateMyBiodata,
   updateBiodataByAdmin,
+  deleteABiodataRequest,
   deleteABiodata,
 };

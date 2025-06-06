@@ -1,7 +1,3 @@
-export const NotificationSearchAbleFields: string[] = ['name'];
+export const NotificationSearchAbleFields: string[] = ['type'];
 
-export const NotificationFilterableFields: string[] = [
-  'searchTerm',
-  'code',
-  'statusId',
-];
+export const NotificationFilterableFields: string[] = ['searchTerm', 'userId'];

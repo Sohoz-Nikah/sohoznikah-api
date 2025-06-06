@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Prisma, ShortlistBiodata } from '@prisma/client';
+import { Prisma, ShortlistBiodata, UserRole } from '@prisma/client';
 import httpStatus from 'http-status';
 import { JwtPayload } from 'jsonwebtoken';
 import ApiError from '../../errors/ApiError';
@@ -15,6 +15,7 @@ const createAShortlist = async (
 ): Promise<ShortlistBiodata> => {
   const { biodataId } = payload;
   const { userId } = user;
+
   if (biodataId) {
     const existingBiodata = await prisma.biodata.findUnique({
       where: { id: biodataId },
@@ -34,7 +35,18 @@ const createAShortlist = async (
     }
   }
 
-  // Create new Shortlist
+  const existingShortlist = await prisma.shortlistBiodata.findFirst({
+    where: {
+      biodataId,
+      userId,
+    },
+  });
+
+  if (existingShortlist) {
+    throw new ApiError(httpStatus.CONFLICT, 'Already in your short list');
+  }
+
+  // 1. Create new Shortlist
   const newShortlist = await prisma.shortlistBiodata.create({
     data: {
       biodataId,
@@ -42,13 +54,52 @@ const createAShortlist = async (
     },
   });
 
+  // 2. Try to update favouriteBiodata if it exists
+  const favourite = await prisma.favouriteBiodata.findUnique({
+    where: {
+      userId_biodataId: {
+        userId,
+        biodataId,
+      },
+    },
+  });
+
+  let updatedFavourite;
+
+  if (favourite) {
+    updatedFavourite = await prisma.favouriteBiodata.update({
+      where: {
+        userId_biodataId: {
+          userId,
+          biodataId,
+        },
+      },
+      data: {
+        isShortlisted: true,
+      },
+    });
+    console.log(updatedFavourite, 'favourite updated');
+  } else {
+    // Optional: create it instead
+    updatedFavourite = await prisma.favouriteBiodata.create({
+      data: {
+        userId,
+        biodataId,
+        isShortlisted: true,
+      },
+    });
+    console.log(updatedFavourite, 'favourite created');
+  }
+
   return newShortlist;
 };
 
 const getFilteredShortlist = async (
   filters: IShortlistFilterRequest,
   options: IPaginationOptions,
+  user: JwtPayload,
 ) => {
+  const { userId, role } = user;
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
   const { searchTerm, ...filterData } = filters;
   const andConditions = [];
@@ -61,6 +112,12 @@ const getFilteredShortlist = async (
           mode: 'insensitive',
         },
       })),
+    });
+  }
+
+  if (role === UserRole.USER) {
+    andConditions.push({
+      userId,
     });
   }
 
@@ -85,6 +142,14 @@ const getFilteredShortlist = async (
     where: whereConditions,
     skip,
     take: limit,
+    include: {
+      // user: true,
+      biodata: {
+        include: {
+          addressInfoFormData: true,
+        },
+      }, // Include related data
+    },
     orderBy:
       options.sortBy && options.sortOrder
         ? {
@@ -99,13 +164,35 @@ const getFilteredShortlist = async (
     where: whereConditions,
   });
 
+  const shortlistData = result.map(shortlist => {
+    const currentAddress = shortlist?.biodata?.addressInfoFormData?.find(
+      item => item.type === 'current_address',
+    );
+
+    const permanentAddresses = shortlist?.biodata?.addressInfoFormData?.find(
+      item => item.type === 'permanent_address',
+    );
+
+    return {
+      id: shortlist.id,
+      biodataId: shortlist.biodataId,
+      userId: shortlist.userId,
+      bioNo: shortlist?.biodata?.code,
+      bioPresentCity: currentAddress?.city,
+      bioPresentState: currentAddress?.state,
+      bioPermanentCity: permanentAddresses?.city,
+      bioPermanentState: permanentAddresses?.state,
+      createdAt: shortlist?.createdAt,
+    };
+  });
+
   return {
     meta: {
       page,
       limit,
       total,
     },
-    data: result, // Return mapped data
+    data: shortlistData, // Return mapped data
   };
 };
 
@@ -122,7 +209,8 @@ const getAShortlist = async (biodataId: string, userId: string) => {
   return result;
 };
 
-const deleteAShortlist = async (ShortlistId: string, userId: string) => {
+const deleteAShortlist = async (ShortlistId: string, user: JwtPayload) => {
+  const { role, userId } = user;
   const existingShortlist = await prisma.shortlistBiodata.findFirst({
     where: {
       id: ShortlistId,
@@ -134,11 +222,44 @@ const deleteAShortlist = async (ShortlistId: string, userId: string) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'Shortlist not found');
   }
 
-  const result = await prisma.shortlistBiodata.delete({
+  const favourite = await prisma.favouriteBiodata.findUnique({
     where: {
-      id: ShortlistId,
+      userId_biodataId: {
+        userId,
+        biodataId: existingShortlist.biodataId,
+      },
     },
   });
+
+  if (favourite) {
+    await prisma.favouriteBiodata.update({
+      where: {
+        userId_biodataId: {
+          userId,
+          biodataId: existingShortlist.biodataId,
+        },
+      },
+      data: {
+        isShortlisted: false,
+      },
+    });
+  }
+
+  let result;
+  if (role === UserRole.USER) {
+    result = await prisma.shortlistBiodata.delete({
+      where: {
+        id: ShortlistId,
+        userId,
+      },
+    });
+  } else {
+    result = await prisma.shortlistBiodata.delete({
+      where: {
+        id: ShortlistId,
+      },
+    });
+  }
 
   return result;
 };

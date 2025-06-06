@@ -1,5 +1,4 @@
-export type IFavouriteFilterRequest = {
+export type ITokenFilterRequest = {
   searchTerm?: string | undefined;
-  type?: string | undefined;
   status?: string | undefined;
 };
