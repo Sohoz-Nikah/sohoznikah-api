@@ -35,7 +35,6 @@ async function handleBiodataOperation(
 ): Promise<Biodata> {
   return await prisma.$transaction(async tx => {
     let biodata: Biodata;
-    console.log('formData', formData);
 
     if (!biodataId) {
       biodata = await tx.biodata.create({
@@ -63,7 +62,13 @@ async function handleBiodataOperation(
       });
     }
     // Handle related records
-    await handleRelatedRecords(tx, biodata.id, formData, userId);
+    await handleRelatedRecords(
+      tx,
+      biodata.id,
+      formData,
+      userId,
+      biodata.status,
+    );
 
     // Create notification
     await tx.notification.create({
@@ -86,6 +91,7 @@ async function handleRelatedRecords(
   biodataId: string,
   formData: BiodataFormData,
   userId: string,
+  status: BiodataStatus,
 ) {
   const {
     firstWordsFormData,
@@ -102,40 +108,76 @@ async function handleRelatedRecords(
     marriageInfoFormData,
     spousePreferenceInfoFormData,
   } = formData;
-  const { guardianContacts } = primaryInfoFormData || {};
+  // const { guardianContacts } = primaryInfoFormData || {};
 
-  console.log({
-    firstWordsFormData,
-    primaryInfoFormData,
-    guardianContacts,
-    profilePicFormData,
-    finalWordsFormData,
-    generalInfoFormData,
-    addressInfoFormData,
-    educationInfoFormData,
-    occupationInfoFormData,
-    familyInfoFormData,
-    religiousInfoFormData,
-    personalInfoFormData,
-    marriageInfoFormData,
-    spousePreferenceInfoFormData,
-  });
+  // console.log({
+  //   firstWordsFormData,
+  //   primaryInfoFormData,
+  //   guardianContacts,
+  //   profilePicFormData,
+  //   finalWordsFormData,
+  //   generalInfoFormData,
+  //   addressInfoFormData,
+  //   educationInfoFormData,
+  //   occupationInfoFormData,
+  //   familyInfoFormData,
+  //   religiousInfoFormData,
+  //   personalInfoFormData,
+  //   marriageInfoFormData,
+  //   spousePreferenceInfoFormData,
+  // });
 
-  // Update biodata-level fields
+  // Update biodata-level fields  2%
   if (firstWordsFormData) {
     await tx.biodata.update({
       where: { id: biodataId },
       data: { ...firstWordsFormData },
     });
+    if (status === BiodataStatus.PROCESSING) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          biodataCompleted: {
+            increment: 2,
+          },
+        },
+      });
+    } else if (status === BiodataStatus.APPROVED) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          status: BiodataStatus.UPDATE_REQUESTED,
+        },
+      });
+    }
   }
 
+  // 2%
   if (profilePicFormData) {
     await tx.biodata.update({
       where: { id: biodataId },
       data: { profilePic: profilePicFormData.photoId },
     });
+    if (status === BiodataStatus.PROCESSING) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          biodataCompleted: {
+            increment: 2,
+          },
+        },
+      });
+    } else if (status === BiodataStatus.APPROVED) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          status: BiodataStatus.UPDATE_REQUESTED,
+        },
+      });
+    }
   }
 
+  // 2%
   if (finalWordsFormData) {
     await tx.biodata.update({
       where: { id: biodataId },
@@ -144,9 +186,27 @@ async function handleRelatedRecords(
         visibility: finalWordsFormData.visibility as VisibilityStatus,
       },
     });
+    if (status === BiodataStatus.PROCESSING) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          biodataCompleted: {
+            increment: 2,
+          },
+          status: BiodataStatus.PENDING,
+        },
+      });
+    } else if (status === BiodataStatus.UPDATE_REQUESTED) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          status: BiodataStatus.EDIT_PENDING,
+        },
+      });
+    }
   }
 
-  // Handle Primary Info (Single Record)
+  // Handle Primary Info (Single Record) 10%
   if (primaryInfoFormData) {
     let generatedId;
     if (primaryInfoFormData.biodataType === BioDataType.GROOM) {
@@ -162,13 +222,6 @@ async function handleRelatedRecords(
         biodataType: BioDataType.BRIDE,
       });
     }
-    await tx.biodata.update({
-      where: { id: biodataId },
-      data: {
-        code: generatedId,
-        biodataType: primaryInfoFormData.biodataType,
-      },
-    });
 
     const { guardianContacts, ...primaryInfoData } = primaryInfoFormData;
     await tx.biodataPrimaryInfo.upsert({
@@ -205,9 +258,34 @@ async function handleRelatedRecords(
         where: { biodataId },
       });
     }
+
+    if (status === BiodataStatus.PROCESSING) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          biodataCompleted: {
+            increment: 10,
+          },
+        },
+      });
+    } else if (status === BiodataStatus.APPROVED) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          status: BiodataStatus.UPDATE_REQUESTED,
+        },
+      });
+    }
+
+    await tx.biodata.update({
+      where: { id: biodataId },
+      data: {
+        code: generatedId,
+      },
+    });
   }
 
-  // Handle General Info (Single Record)
+  // Handle General Info (Single Record) 10%
   if (generalInfoFormData) {
     const {
       dateOfBirth,
@@ -243,8 +321,26 @@ async function handleRelatedRecords(
         createdBy: userId,
       },
     });
+    if (status === BiodataStatus.PROCESSING) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          biodataCompleted: {
+            increment: 10,
+          },
+        },
+      });
+    } else if (status === BiodataStatus.APPROVED) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          status: BiodataStatus.UPDATE_REQUESTED,
+        },
+      });
+    }
   }
-  // Handle Address Info (Multiple Records)
+
+  // Handle Address Info (Multiple Records) 10%
   if (addressInfoFormData && addressInfoFormData?.addresses?.length > 0) {
     await tx.biodataAddressInfo.deleteMany({ where: { biodataId } });
     await tx.biodataAddressInfo.createMany({
@@ -261,9 +357,26 @@ async function handleRelatedRecords(
         createdBy: userId,
       })),
     });
+    if (status === BiodataStatus.PROCESSING) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          biodataCompleted: {
+            increment: 10,
+          },
+        },
+      });
+    } else if (status === BiodataStatus.APPROVED) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          status: BiodataStatus.UPDATE_REQUESTED,
+        },
+      });
+    }
   }
 
-  // Handle Education Info (Single Record)
+  // Handle Education Info (Single Record) 10%
   if (educationInfoFormData) {
     const { type, highestDegree, religiousEducation, detail, degrees } =
       educationInfoFormData;
@@ -302,9 +415,27 @@ async function handleRelatedRecords(
         })),
       });
     }
+
+    if (status === BiodataStatus.PROCESSING) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          biodataCompleted: {
+            increment: 10,
+          },
+        },
+      });
+    } else if (status === BiodataStatus.APPROVED) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          status: BiodataStatus.UPDATE_REQUESTED,
+        },
+      });
+    }
   }
 
-  // Handle Occupation Info (Single Record)
+  // Handle Occupation Info (Single Record) 10%
   if (occupationInfoFormData) {
     const { detail, occupations, monthlyIncome } = occupationInfoFormData;
     await tx.biodataOccupationInfo.upsert({
@@ -324,9 +455,26 @@ async function handleRelatedRecords(
         createdBy: userId,
       },
     });
+    if (status === BiodataStatus.PROCESSING) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          biodataCompleted: {
+            increment: 10,
+          },
+        },
+      });
+    } else if (status === BiodataStatus.APPROVED) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          status: BiodataStatus.UPDATE_REQUESTED,
+        },
+      });
+    }
   }
 
-  // Handle Family Info (Single Record)
+  // Handle Family Info (Single Record) 10%
   if (familyInfoFormData) {
     const {
       parentsAlive,
@@ -387,9 +535,26 @@ async function handleRelatedRecords(
     } else {
       await tx.biodataFamilyInfoSibling.deleteMany({ where: { biodataId } });
     }
+    if (status === BiodataStatus.PROCESSING) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          biodataCompleted: {
+            increment: 10,
+          },
+        },
+      });
+    } else if (status === BiodataStatus.APPROVED) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          status: BiodataStatus.UPDATE_REQUESTED,
+        },
+      });
+    }
   }
 
-  // Handle Religious Info (Single Record)
+  // Handle Religious Info (Single Record) 10%
   if (religiousInfoFormData) {
     const {
       type,
@@ -437,9 +602,26 @@ async function handleRelatedRecords(
         createdBy: userId,
       },
     });
+    if (status === BiodataStatus.PROCESSING) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          biodataCompleted: {
+            increment: 10,
+          },
+        },
+      });
+    } else if (status === BiodataStatus.APPROVED) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          status: BiodataStatus.UPDATE_REQUESTED,
+        },
+      });
+    }
   }
 
-  // Handle Personal Info (Single Record)
+  // Handle Personal Info (Single Record) 8%
   if (personalInfoFormData) {
     const {
       beardStatus,
@@ -481,9 +663,26 @@ async function handleRelatedRecords(
         createdBy: userId,
       },
     });
+    if (status === BiodataStatus.PROCESSING) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          biodataCompleted: {
+            increment: 8,
+          },
+        },
+      });
+    } else if (status === BiodataStatus.APPROVED) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          status: BiodataStatus.UPDATE_REQUESTED,
+        },
+      });
+    }
   }
 
-  // Handle Marriage Info (Single Record)
+  // Handle Marriage Info (Single Record) 8%
   if (marriageInfoFormData) {
     const {
       reasonForRemarriage,
@@ -543,9 +742,26 @@ async function handleRelatedRecords(
         createdBy: userId,
       },
     });
+    if (status === BiodataStatus.PROCESSING) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          biodataCompleted: {
+            increment: 8,
+          },
+        },
+      });
+    } else if (status === BiodataStatus.APPROVED) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          status: BiodataStatus.UPDATE_REQUESTED,
+        },
+      });
+    }
   }
 
-  // Handle Spouse Preference Info (Single Record)
+  // Handle Spouse Preference Info (Single Record) 8%
   if (spousePreferenceInfoFormData) {
     const {
       age,
@@ -602,6 +818,23 @@ async function handleRelatedRecords(
         createdBy: userId,
       },
     });
+    if (status === BiodataStatus.PROCESSING) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          biodataCompleted: {
+            increment: 8,
+          },
+        },
+      });
+    } else if (status === BiodataStatus.APPROVED) {
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          status: BiodataStatus.UPDATE_REQUESTED,
+        },
+      });
+    }
   }
 }
 
@@ -612,7 +845,7 @@ const createABiodata = async (
   return handleBiodataOperation(null, req.body, creator);
 };
 
-export const getFilteredBiodata = async (
+const getFilteredBiodata = async (
   filters: IBiodataFilterRequest,
   options: IPaginationOptions,
 ) => {
@@ -714,6 +947,11 @@ export const getFilteredBiodata = async (
   };
 };
 
+const getAllBiodata = async () => {
+  const biodata = await prisma.biodata.findMany();
+  return biodata;
+};
+
 const getABiodata = async (biodataId: string) => {
   const biodata = await prisma.biodata.findFirst({
     where: {
@@ -740,6 +978,12 @@ const getABiodata = async (biodataId: string) => {
   if (!biodata) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Biodata not found');
   }
+  await prisma.biodata.update({
+    where: { id: biodataId },
+    data: {
+      totalViews: { increment: 1 },
+    },
+  });
   return biodata;
 };
 
@@ -769,6 +1013,10 @@ const getMyBiodata = async (userId: string) => {
   // console.log('user', user);
   return {
     ...biodata,
+    biodataCompleted:
+      biodata?.biodataCompleted && biodata?.biodataCompleted > 100
+        ? 100
+        : biodata?.biodataCompleted,
     token: user?.token,
   };
 };
@@ -819,6 +1067,31 @@ const updateMyBiodata = async (
   return biodataData;
 };
 
+const getBiodataByAdmin = async (biodataId: string) => {
+  const biodata = await prisma.biodata.findFirst({
+    where: { id: biodataId },
+    include: {
+      primaryInfoFormData: true,
+      generalInfoFormData: true,
+      addressInfoFormData: true,
+      educationInfoFormData: true,
+      educationDegrees: true,
+      occupationInfoFormData: true,
+      familyInfoFormData: true,
+      familySiblings: true,
+      religiousInfoFormData: true,
+      personalInfoFormData: true,
+      marriageInfoFormData: true,
+      spousePreferenceInfoFormData: true,
+      guardianContacts: true,
+    },
+  });
+  if (!biodata) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Biodata not found');
+  }
+  return biodata;
+};
+
 const updateBiodataByAdmin = async (
   biodataId: string,
   payload: Record<string, any>,
@@ -826,6 +1099,26 @@ const updateBiodataByAdmin = async (
 ): Promise<Biodata> => {
   await prisma.biodata.findFirstOrThrow({ where: { id: biodataId } });
   return handleBiodataOperation(biodataId, payload, updater, true);
+};
+
+const updateBiodataVisibility = async (
+  biodataId: string,
+  payload: Record<string, any>,
+): Promise<Biodata> => {
+  const biodata = await prisma.biodata.findFirst({
+    where: { id: biodataId },
+  });
+  if (!biodata) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Biodata not found');
+  }
+
+  return prisma.biodata.update({
+    where: { id: biodataId },
+    data: {
+      visibility: payload.visibility,
+      status: payload.status,
+    },
+  });
 };
 
 const deleteABiodataRequest = async (
@@ -927,13 +1220,65 @@ const deleteABiodata = async (
   }
 };
 
+const getBiodataAnalytics = async (userId: string) => {
+  const userData = await prisma.user.findFirst({
+    where: { id: userId },
+    include: {
+      biodatas: true,
+      sentProposals: true,
+      receivedProposals: true,
+      favouriteBiodata: {
+        include: {
+          biodata: true,
+        },
+      },
+      shortlistBiodata: {
+        include: {
+          biodata: true,
+        },
+      },
+      ContactAccessSender: true,
+      ContactAccessReceiver: true,
+    },
+  });
+
+  const result = {
+    // total received
+    totalViews: userData?.biodatas?.totalViews,
+    totalProposalReceived: userData?.receivedProposals?.length,
+    totalShortlistReceived: userData?.shortlistBiodata?.filter(
+      item => item.biodata?.userId === userId,
+    )?.length,
+    totalFavouriteReceived: userData?.favouriteBiodata?.filter(
+      item => item.biodata?.userId === userId,
+    )?.length,
+    totalContactReceived: userData?.ContactAccessReceiver?.length,
+    totalReportReceived: 0,
+    // total sent
+    totalFavouriteSent: userData?.favouriteBiodata?.filter(
+      item => item.userId === userId,
+    )?.length,
+    totalShortlistSent: userData?.shortlistBiodata?.filter(
+      item => item.userId === userId,
+    )?.length,
+    totalProposalSent: userData?.sentProposals?.length,
+    totalContactSent: userData?.ContactAccessSender?.length,
+    totalReportSent: 0,
+  };
+  return result;
+};
+
 export const BiodataServices = {
   createABiodata,
   getFilteredBiodata,
   getABiodata,
   getMyBiodata,
+  getAllBiodata,
   updateMyBiodata,
+  getBiodataByAdmin,
   updateBiodataByAdmin,
   deleteABiodataRequest,
   deleteABiodata,
+  updateBiodataVisibility,
+  getBiodataAnalytics,
 };

@@ -96,9 +96,10 @@ const getFilteredNotification = async (
       options.sortBy && options.sortOrder
         ? {
             [options.sortBy]: options.sortOrder,
+            createdAt: 'desc',
           }
         : {
-            id: 'desc',
+            createdAt: 'desc',
           },
   });
 

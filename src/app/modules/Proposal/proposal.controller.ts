@@ -54,6 +54,24 @@ const getAProposal = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getProposalByBiodataId = catchAsync(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    console.log(id);
+    const result = await ProposalServices.getProposalByBiodataId(
+      id,
+      req.user as JwtPayload,
+    );
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: 'Received Proposal retrieved successfully',
+      data: result,
+    });
+  },
+);
+
 const cancelProposal = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
   const result = await ProposalServices.cancelProposal(
@@ -109,6 +127,7 @@ export const ProposalControllers = {
   createAProposal,
   getFilteredProposal,
   getAProposal,
+  getProposalByBiodataId,
   cancelProposal,
   updateProposalResponse,
   deleteAProposal,

@@ -6,6 +6,11 @@ import { ProposalControllers } from './proposal.controller';
 import { ProposalValidation } from './proposal.validation';
 
 const router = express.Router();
+router.get(
+  '/biodata/:id',
+  auth([UserRole.USER]),
+  ProposalControllers.getProposalByBiodataId,
+);
 
 router.post(
   '/',

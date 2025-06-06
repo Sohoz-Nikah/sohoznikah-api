@@ -1,53 +1,60 @@
-import express from "express";
-import { UserControllers } from "./user.controller";
-import auth from "../../middlewares/auth";
-import validateRequest from "../../middlewares/validateRequest";
-import { UserValidation } from "./user.validation";
-import { UserRole } from "@prisma/client";
+import { UserRole } from '@prisma/client';
+import express from 'express';
+import auth from '../../middlewares/auth';
+import validateRequest from '../../middlewares/validateRequest';
+import { UserControllers } from './user.controller';
+import { UserValidation } from './user.validation';
 
 const router = express.Router();
 
 router.get(
-  "/",
+  '/',
   auth([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
-  UserControllers.getAllUsers
+  UserControllers.getAllUsers,
 );
 
 router.get(
-  "/dashboard",
+  '/dashboard',
   auth([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
-  UserControllers.analytics
+  UserControllers.analytics,
 );
 router.get(
-  "/me",
+  '/me',
   auth([UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.USER]),
-  UserControllers.getMyProfile
+  UserControllers.getMyProfile,
 );
 
 router.get(
-  "/:id",
+  '/:id',
   auth([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
-  UserControllers.getSingleUser
+  UserControllers.getSingleUser,
+);
+
+router.post(
+  '/:id/give-token',
+  auth([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
+  validateRequest(UserValidation.giveTokenValidationSchema),
+  UserControllers.giveToken,
 );
 
 router.patch(
-  "/update-my-profile",
+  '/update-my-profile',
   auth([UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.USER]),
   validateRequest(UserValidation.updateMyProfileValidationSchema),
-  UserControllers.updateMyProfile
+  UserControllers.updateMyProfile,
 );
 
 router.patch(
-  "/:id",
+  '/:id',
   auth([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
   validateRequest(UserValidation.updateUserValidationSchema),
-  UserControllers.updateUser
+  UserControllers.updateUser,
 );
 
 router.delete(
-  "/:id",
+  '/:id',
   auth([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
-  UserControllers.deleteUser
+  UserControllers.deleteUser,
 );
 
 export const UserRoutes = router;

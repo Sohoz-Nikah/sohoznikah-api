@@ -180,6 +180,20 @@ export const FullBiodataSchema = CreateBiodataSchema.extend({
     .optional(),
 });
 
+export const updateBiodataVisibilityValidationSchema = z.object({
+  visibility: z.enum(['PUBLIC', 'PRIVATE']).optional(),
+  status: z
+    .enum([
+      'PENDING',
+      'APPROVED',
+      'REJECTED',
+      'UPDATE_REQUESTED',
+      'DELETE_REQUESTED',
+      'DELETED',
+    ])
+    .optional(),
+});
+
 export const createBiodataValidationSchema = z.object({
   ...FullBiodataSchema.shape,
 });

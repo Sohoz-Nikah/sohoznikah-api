@@ -1,3 +1,0 @@
--- AlterTable
-ALTER TABLE "Biodata" ALTER COLUMN "biodataType" DROP NOT NULL,
-ALTER COLUMN "code" DROP NOT NULL;

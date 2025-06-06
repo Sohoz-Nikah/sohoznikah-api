@@ -69,6 +69,17 @@ const updateContactResponse = catchAsync(
   },
 );
 
+const getMyContact = catchAsync(async (req: Request, res: Response) => {
+  const result = await ContactServices.getMyContact(req.user as JwtPayload);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'My Contact retrieved successfully',
+    data: result,
+  });
+});
+
 const deleteAContact = catchAsync(async (req: Request, res: Response) => {
   const { id: ContactId } = req.params;
 
@@ -93,4 +104,5 @@ export const ContactControllers = {
   getAContact,
   updateContactResponse,
   deleteAContact,
+  getMyContact,
 };

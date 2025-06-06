@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Prisma, User, UserRole } from '@prisma/client';
+import { Prisma, User, UserRole, VisibilityStatus } from '@prisma/client';
 import httpStatus from 'http-status';
+import { JwtPayload } from 'jsonwebtoken';
 import config from '../../config';
 import ApiError from '../../errors/ApiError';
 import { exclude } from '../../helper/exclude';
@@ -51,6 +52,16 @@ const getAllUsers = async (
     where: whereConditions,
     skip,
     take: limit,
+    include: {
+      biodatas: {
+        select: {
+          id: true,
+          code: true,
+          status: true,
+          visibility: true,
+        },
+      },
+    },
     orderBy:
       options.sortBy && options.sortOrder
         ? {
@@ -151,10 +162,14 @@ const updateMyProfile = async (
 };
 
 const updateUser = async (
-  userId: string,
+  user: JwtPayload,
   updateUserId: string,
-  data: Partial<User>,
+  data: Partial<User & { biodataVisibility: VisibilityStatus }>,
 ) => {
+  const { userId } = user;
+  const { name, email, phoneNumber, role, status, isDeleted, emailConfirmed } =
+    data;
+  console.log('data', data);
   const updateBy = await prisma.user.findUniqueOrThrow({
     where: {
       id: userId,
@@ -176,19 +191,53 @@ const updateUser = async (
       'You are not authorized to update this user!',
     );
   }
+
+  const updatedData: any = {
+    ...(name !== undefined && { name }),
+    ...(email !== undefined && { email }),
+    ...(phoneNumber !== undefined && { phoneNumber }),
+    ...(role !== undefined && { role }),
+    ...(status && { status }), // this ensures status is not empty string
+    ...(isDeleted !== undefined && { isDeleted }),
+    ...(emailConfirmed !== undefined && { emailConfirmed }),
+  };
+
   const result = await prisma.user.update({
     where: {
       id: updateUserId,
     },
-    data: {
-      name: data.name,
-      email: data.email,
-      phoneNumber: data.phoneNumber,
-      role: data.role,
-      status: data.status,
-      isDeleted: data.isDeleted,
+    data: updatedData,
+    include: {
+      biodatas: {
+        select: {
+          id: true,
+          code: true,
+          status: true,
+          visibility: true,
+        },
+      },
     },
   });
+  // const result = await prisma.user.update({
+  //   where: {
+  //     id: updateUserId,
+  //   },
+  //   data: {
+  //     name: data.name,
+  //     email: data.email,
+  //     phoneNumber: data.phoneNumber,
+  //     role: data.role,
+  //     status: data.status,
+  //     isDeleted: data.isDeleted,
+  //     emailConfirmed: data.emailConfirmed,
+  //     token: data.token,
+  //     biodatas: {
+  //       update: {
+  //         visibility: data.biodataVisibility,
+  //       },
+  //     },
+  //   },
+  // });
 
   const safeUser = exclude(result, [
     'passwordHash',
@@ -198,6 +247,37 @@ const updateUser = async (
   ]);
 
   return safeUser;
+};
+
+const giveToken = async (userId: string, payload: { token: number }) => {
+  const { token } = payload;
+  const user = await prisma.user.findFirst({
+    where: {
+      id: userId,
+    },
+  });
+
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  const result = await prisma.user.update({
+    where: {
+      id: userId,
+    },
+    data: {
+      token: { increment: token },
+    },
+  });
+  await prisma.notification.create({
+    data: {
+      type: 'TOKEN_GIVEN',
+      message: `You have been given ${token} tokens`,
+      userId: userId,
+    },
+  });
+
+  return result;
 };
 
 const deleteUser = async (id: string, userId: string) => {
@@ -266,6 +346,7 @@ export const UserServices = {
   updateMyProfile,
   getAllUsers,
   getSingleUser,
+  giveToken,
   updateUser,
   deleteUser,
   analytics,

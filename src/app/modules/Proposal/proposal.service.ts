@@ -239,6 +239,28 @@ const getAProposal = async (ProposalId: string, user: JwtPayload) => {
   return result;
 };
 
+const getProposalByBiodataId = async (biodataId: string, user: JwtPayload) => {
+  const { userId, role } = user;
+  let result: Proposal | null = null;
+  if (role === 'USER') {
+    result = await prisma.proposal.findFirst({
+      where: {
+        biodataId: biodataId,
+        OR: [{ receiverId: userId }, { senderId: userId }],
+      },
+    });
+  }
+
+  if (!result) {
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      'Donot received any proposal from this biodata.',
+    );
+  }
+
+  return result;
+};
+
 const cancelProposal = async (proposalId: string, user: JwtPayload) => {
   const { userId, role } = user;
 
@@ -350,6 +372,7 @@ const deleteAProposal = async (
 export const ProposalServices = {
   createAProposal,
   getFilteredProposal,
+  getProposalByBiodataId,
   getAProposal,
   cancelProposal,
   updateProposalResponse,

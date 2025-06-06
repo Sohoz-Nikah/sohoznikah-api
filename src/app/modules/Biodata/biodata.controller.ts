@@ -21,7 +21,6 @@ const createABiodata = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getFilteredBiodata = catchAsync(async (req: Request, res: Response) => {
-  console.log(req.query);
   const filters = pick(req.query, BiodataFilterableFields);
   const options = pick(req.query, ['limit', 'page', 'sortBy', 'sortOrder']);
   const result = await BiodataServices.getFilteredBiodata(filters, options);
@@ -32,6 +31,17 @@ const getFilteredBiodata = catchAsync(async (req: Request, res: Response) => {
     message: 'Biodata retrieved successfully',
     meta: result.meta,
     data: result.data,
+  });
+});
+
+const getAllBiodata = catchAsync(async (req: Request, res: Response) => {
+  const result = await BiodataServices.getAllBiodata();
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Biodata retrieved successfully',
+    data: result,
   });
 });
 
@@ -71,6 +81,18 @@ const updateMyBiodata = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getBiodataByAdmin = catchAsync(async (req: Request, res: Response) => {
+  const { id: biodataId } = req.params;
+  const result = await BiodataServices.getBiodataByAdmin(biodataId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Biodata retrieved successfully',
+    data: result,
+  });
+});
+
 const updateBiodataByAdmin = catchAsync(async (req: Request, res: Response) => {
   const { id: biodataId } = req.params;
   const { userId } = req.user as JwtPayload;
@@ -88,6 +110,23 @@ const updateBiodataByAdmin = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
+
+const updateBiodataVisibility = catchAsync(
+  async (req: Request, res: Response) => {
+    const { id: biodataId } = req.params;
+    const result = await BiodataServices.updateBiodataVisibility(
+      biodataId,
+      req.body,
+    );
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: 'Biodata status updated successfully',
+      data: result,
+    });
+  },
+);
 
 const deleteABiodataRequest = catchAsync(
   async (req: Request, res: Response) => {
@@ -125,13 +164,29 @@ const deleteABiodata = catchAsync(async (req: Request, res: Response) => {
   }
 });
 
+const getBiodataAnalytics = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user as JwtPayload;
+  const result = await BiodataServices.getBiodataAnalytics(userId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Biodata analytics retrieved successfully',
+    data: result,
+  });
+});
+
 export const BiodataControllers = {
   createABiodata,
   getFilteredBiodata,
+  getAllBiodata,
   getABiodata,
   getMyBiodata,
   updateMyBiodata,
   updateBiodataByAdmin,
+  getBiodataByAdmin,
+  updateBiodataVisibility,
   deleteABiodataRequest,
   deleteABiodata,
+  getBiodataAnalytics,
 };

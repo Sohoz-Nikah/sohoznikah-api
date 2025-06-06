@@ -1,13 +1,14 @@
 import { Request, Response } from 'express';
-import sendResponse from '../../shared/sendResponse';
 import httpStatus from 'http-status';
-import catchAsync from '../../shared/catchAsync';
-import { UserServices } from './user.service';
-import { jwtHelpers } from '../../helper/jwtHelpers';
+import { JwtPayload } from 'jsonwebtoken';
 import config from '../../config';
-import pick from '../../shared/pick';
-import { UserFilterableFields } from './user.constant';
 import ApiError from '../../errors/ApiError';
+import { jwtHelpers } from '../../helper/jwtHelpers';
+import catchAsync from '../../shared/catchAsync';
+import pick from '../../shared/pick';
+import sendResponse from '../../shared/sendResponse';
+import { UserFilterableFields } from './user.constant';
+import { UserServices } from './user.service';
 
 const getAllUsers = catchAsync(async (req: Request, res: Response) => {
   const filters = pick(req.query, UserFilterableFields);
@@ -18,7 +19,8 @@ const getAllUsers = catchAsync(async (req: Request, res: Response) => {
     statusCode: httpStatus.OK,
     success: true,
     message: 'All User retrieved successfully!',
-    data: result,
+    data: result.data,
+    meta: result.meta,
   });
 });
 
@@ -67,19 +69,28 @@ const updateMyProfile = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updateUser = catchAsync(async (req: Request, res: Response) => {
-  const token = req.headers.authorization as string;
-  const { userId } = jwtHelpers.verifyToken(
-    token,
-    config.jwt.access_secret as string,
-  );
-
   const { id } = req.params;
-  const result = await UserServices.updateUser(userId, id, req.body);
+  const result = await UserServices.updateUser(
+    req.user as JwtPayload,
+    id,
+    req.body,
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: 'User updated Successfully!',
+    data: result,
+  });
+});
+
+const giveToken = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await UserServices.giveToken(id, req.body);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Token given successfully!',
     data: result,
   });
 });
@@ -123,6 +134,7 @@ export const UserControllers = {
   getSingleUser,
   getMyProfile,
   updateMyProfile,
+  giveToken,
   updateUser,
   deleteUser,
   analytics,

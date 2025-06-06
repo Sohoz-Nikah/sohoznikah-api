@@ -7,7 +7,16 @@ const updateUserValidationSchema = z.object({
   contactNumber: z.string().length(11).optional(),
   isDeleted: z.boolean().optional(),
   address: z.string().optional(),
-  status: z.enum(['PENDING', 'ACTIVE', 'BLOCKED']).optional(),
+  status: z
+    .string(z.enum(['PENDING', 'ACTIVE', 'BLOCKED']))
+    .nullable()
+    .optional(),
+  emailConfirmed: z.boolean().nullable().optional(),
+  token: z.number().nullable().optional(),
+  biodataVisibility: z
+    .string(z.enum(['PUBLIC', 'PRIVATE']))
+    .nullable()
+    .optional(),
 });
 
 const updateMyProfileValidationSchema = z.object({
@@ -18,6 +27,10 @@ const updateMyProfileValidationSchema = z.object({
   address: z.string().optional(),
 });
 
+const giveTokenValidationSchema = z.object({
+  token: z.number(),
+});
+
 const changeUserStatus = z.object({
   role: z.enum(['ADMIN', 'SUPER_ADMIN']),
 });
@@ -25,5 +38,6 @@ const changeUserStatus = z.object({
 export const UserValidation = {
   updateUserValidationSchema,
   updateMyProfileValidationSchema,
+  giveTokenValidationSchema,
   changeUserStatus,
 };

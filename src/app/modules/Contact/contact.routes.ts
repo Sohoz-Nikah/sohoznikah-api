@@ -15,6 +15,12 @@ router.post(
 );
 
 router.get(
+  '/my-contact',
+  auth([UserRole.USER]),
+  ContactControllers.getMyContact,
+);
+
+router.get(
   '/',
   auth([UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.USER]),
   ContactControllers.getFilteredContact,

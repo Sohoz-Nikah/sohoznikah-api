@@ -117,8 +117,11 @@ model Biodata {
     updatedAt                           DateTime?
     deletedAt                           DateTime?
     deletedBy                           String?
-    status                              BiodataStatus    @default(PENDING)
+    isDeleted                           Boolean          @default(false)
+    status                              BiodataStatus    @default(PROCESSING)
     visibility                          VisibilityStatus @default(PRIVATE)
+    biodataCompleted                    Int              @default(0)
+    totalViews                          Int              @default(0)
 
     // Relations
 
@@ -158,11 +161,14 @@ enum BioDataType {
 }
 
 enum BiodataStatus {
+    PROCESSING
     PENDING
     APPROVED
     REJECTED
     UPDATE_REQUESTED
+    EDIT_PENDING
     DELETE_REQUESTED
+    DELETED
 }
 
 model BiodataPrimaryInfo {
@@ -505,7 +511,7 @@ model ContactAccess {
     senderId         String
     receiverId       String
     biodataId        String
-    tokenSpent       Boolean       @default(true)
+    tokenSpent       Int           @default(2)
     tokenRefunded    Boolean       @default(false)
     contactStatus    ContactStatus @default(PENDING)
     contactExpiredAt DateTime?

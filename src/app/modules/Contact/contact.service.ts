@@ -17,27 +17,15 @@ const createAContact = async (
   const { biodataId } = payload;
   const { userId } = user;
 
-  if (!biodataId || !userId) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'Missing biodata or user ID');
-  }
-
   const existingBiodata = await prisma.biodata.findUnique({
     where: { id: biodataId },
   });
-
-  if (!existingBiodata) {
+  if (!existingBiodata)
     throw new ApiError(httpStatus.NOT_FOUND, 'Biodata not found');
-  }
 
-  const existingUser = await prisma.user.findUnique({
-    where: { id: userId },
-  });
+  const existingUser = await prisma.user.findUnique({ where: { id: userId } });
+  if (!existingUser) throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
 
-  if (!existingUser) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
-  }
-
-  // Check if already sent Contact
   const alreadySent = await prisma.contactAccess.findFirst({
     where: {
       senderId: userId,
@@ -46,24 +34,20 @@ const createAContact = async (
       contactStatus: { in: ['PENDING'] },
     },
   });
-
-  if (alreadySent) {
+  if (alreadySent)
     throw new ApiError(
       httpStatus.CONFLICT,
       'You have already sent a Contact Request',
     );
-  }
 
-  if (existingUser.token < 2) {
+  if (existingUser.token < 2)
     throw new ApiError(httpStatus.BAD_REQUEST, 'Not enough tokens');
-  }
 
   await prisma.user.update({
     where: { id: userId },
     data: { token: { decrement: 2 } },
   });
 
-  // Create Contact
   const newContact = await prisma.contactAccess.create({
     data: {
       biodataId,
@@ -73,13 +57,6 @@ const createAContact = async (
     },
   });
 
-  if (!newContact) {
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      'Failed to create Contact',
-    );
-  }
-  // Optional: Log update
   await prisma.notification.create({
     data: {
       type: 'Got New Contact',
@@ -241,34 +218,14 @@ const getAContact = async (ContactId: string, user: JwtPayload) => {
   return result;
 };
 
-// const cancelContact = async (ContactId: string, user: JwtPayload) => {
-//   const { userId, role } = user;
+const getMyContact = async (user: JwtPayload) => {
+  const { userId } = user;
 
-//   if (role === UserRole.SUPER_ADMIN || role === UserRole.ADMIN) {
-//     throw new ApiError(
-//       httpStatus.BAD_REQUEST,
-//       'You are not allowed to cancel Contact',
-//     );
-//   }
-
-//   const Contact = await prisma.contactAccess.findUnique({
-//     where: { id: ContactId, senderId: userId },
-//   });
-
-//   if (!Contact) throw new ApiError(httpStatus.NOT_FOUND, 'Contact not found');
-
-//   if (Contact.contactExpiredAt && Contact.contactExpiredAt > new Date()) {
-//     throw new ApiError(
-//       httpStatus.BAD_REQUEST,
-//       'You cannot cancel Contact before 72 hours',
-//     );
-//   }
-
-//   return prisma.contactAccess.update({
-//     where: { id: ContactId, senderId: userId },
-//     data: { isCancelled: true },
-//   });
-// };
+  const result = await prisma.contactAccess.findMany({
+    where: { receiverId: userId, contactStatus: ContactStatus.PENDING },
+  });
+  return result;
+};
 
 const updateContactResponse = async (
   ContactId: string,
@@ -349,10 +306,66 @@ const deleteAContact = async (
   return result;
 };
 
+// New function to check and cancel expired requests
+const checkAndCancelExpiredRequests = async () => {
+  try {
+    const now = new Date();
+    // Find all pending requests where contactExpiredAt is in the past
+    const expiredRequests = await prisma.contactAccess.findMany({
+      where: {
+        contactStatus: 'PENDING',
+        contactExpiredAt: {
+          lte: now,
+        },
+      },
+    });
+
+    // Process each expired request
+    const updatePromises = expiredRequests.map(async request => {
+      // Update status to REJECTED and mark tokens as refunded
+      await prisma.contactAccess.update({
+        where: { id: request.id },
+        data: {
+          contactStatus: 'REJECTED',
+          tokenRefunded: true,
+          tokenSpent: 0,
+        },
+      });
+
+      // Refund 2 tokens to the sender
+      await prisma.user.update({
+        where: { id: request.senderId },
+        data: {
+          token: {
+            increment: 2,
+          },
+        },
+      });
+
+      // Create a notification for the sender
+      await prisma.notification.create({
+        data: {
+          type: 'CONTACT_AUTO_CANCELLED',
+          message: `Your contact request for biodata ${request.biodataId} has been automatically cancelled due to expiration.`,
+          userId: request.senderId,
+          contactAccessId: request.id,
+        },
+      });
+    });
+
+    // Wait for all updates to complete
+    await Promise.all(updatePromises);
+  } catch (error) {
+    console.error('Error in checkAndCancelExpiredRequests:', error);
+  }
+};
+
 export const ContactServices = {
   createAContact,
   getFilteredContact,
   getAContact,
   updateContactResponse,
   deleteAContact,
+  checkAndCancelExpiredRequests,
+  getMyContact,
 };

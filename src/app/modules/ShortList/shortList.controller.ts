@@ -12,13 +12,21 @@ const createAShortlist = catchAsync(async (req: Request, res: Response) => {
     req.body,
     req.user as JwtPayload,
   );
-
-  sendResponse(res, {
-    success: true,
-    statusCode: httpStatus.CREATED,
-    message: 'Added to Shortlist successfully',
-    data: result,
-  });
+  if (result) {
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.CREATED,
+      message: 'Added to Shortlist successfully',
+      data: result,
+    });
+  } else {
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: 'Deleted from Shortlist successfully',
+      data: null,
+    });
+  }
 });
 
 const getFilteredShortlist = catchAsync(async (req: Request, res: Response) => {
@@ -60,7 +68,7 @@ const deleteAShortlist = catchAsync(async (req: Request, res: Response) => {
     req.user as JwtPayload,
   );
 
-  if (result) {
+  if (result || result === null) {
     sendResponse(res, {
       statusCode: httpStatus.OK,
       success: true,
