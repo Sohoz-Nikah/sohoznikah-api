@@ -40,6 +40,7 @@ router.post(
 router.patch(
   '/:id',
   auth([UserRole.USER]),
+  validateRequest(ProposalValidation.updateProposalResponseValidationSchema),
   ProposalControllers.updateProposalResponse,
 );
 

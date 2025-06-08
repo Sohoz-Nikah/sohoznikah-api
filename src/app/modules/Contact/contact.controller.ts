@@ -21,6 +21,24 @@ const createAContact = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getContactByBiodataId = catchAsync(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const result = await ContactServices.getContactByBiodataId(
+      id,
+      req.user as JwtPayload,
+      req.query,
+    );
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: 'Contact retrieved successfully',
+      data: result,
+    });
+  },
+);
+
 const getFilteredContact = catchAsync(async (req: Request, res: Response) => {
   const filters = pick(req.query, ContactFilterableFields);
   const options = pick(req.query, ['limit', 'page', 'sortBy', 'sortOrder']);
@@ -101,6 +119,7 @@ const deleteAContact = catchAsync(async (req: Request, res: Response) => {
 export const ContactControllers = {
   createAContact,
   getFilteredContact,
+  getContactByBiodataId,
   getAContact,
   updateContactResponse,
   deleteAContact,

@@ -213,27 +213,13 @@ const deleteAFavourite = async (
   if (!existingFavourite) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Favourite not found');
   }
-
-  if (role === UserRole.USER) {
-    const shortlistData = await prisma.shortlistBiodata.findFirst({
-      where: {
-        biodataId: existingFavourite?.biodataId,
-        userId,
-      },
-    });
-
-    await prisma.shortlistBiodata.delete({
-      where: {
-        id: shortlistData?.id,
-      },
-    });
-  } else {
-    const shortlistData = await prisma.shortlistBiodata.findFirst({
-      where: {
-        biodataId: existingFavourite?.biodataId,
-      },
-    });
-
+  const shortlistData = await prisma.shortlistBiodata.findFirst({
+    where: {
+      biodataId: existingFavourite?.biodataId,
+      userId,
+    },
+  });
+  if (shortlistData) {
     await prisma.shortlistBiodata.delete({
       where: {
         id: shortlistData?.id,

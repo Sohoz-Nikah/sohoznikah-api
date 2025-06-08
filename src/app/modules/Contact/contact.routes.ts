@@ -7,6 +7,12 @@ import { ContactValidation } from './contact.validation';
 
 const router = express.Router();
 
+router.get(
+  '/biodata/:id',
+  auth([UserRole.USER]),
+  ContactControllers.getContactByBiodataId,
+);
+
 router.post(
   '/',
   auth([UserRole.USER]),

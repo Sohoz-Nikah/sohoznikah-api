@@ -69,6 +69,70 @@ const createAContact = async (
   return newContact;
 };
 
+const getContactByBiodataId = async (
+  biodataId: string,
+  user: JwtPayload,
+  query: any,
+) => {
+  // const { type } = query;
+  const { userId, role } = user;
+  let result: ContactAccess | null = null;
+  if (role === 'USER') {
+    result = await prisma.contactAccess.findFirst({
+      where: {
+        biodataId: biodataId,
+        OR: [{ senderId: userId }],
+      },
+    });
+  }
+
+  if (!result) {
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      'Donot received any contact from this biodata.',
+    );
+  }
+
+  const fullName = await prisma.biodataPrimaryInfo.findUnique({
+    where: {
+      biodataId: result.biodataId,
+    },
+    select: {
+      fullName: true,
+    },
+  });
+
+  const contactData = await prisma.biodataPrimaryInfoGuardianContact.findMany({
+    where: {
+      biodataId: result.biodataId,
+    },
+    select: {
+      id: true,
+      relation: true,
+      phoneNumber: true,
+    },
+  });
+
+  const biodataContact = {
+    id: result.id,
+    biodataId: result.biodataId,
+    senderId: result.senderId,
+    receiverId: result.receiverId,
+    contactStatus: result.contactStatus,
+    contactExpiredAt: result.contactExpiredAt,
+    createdAt: result.createdAt,
+    respondedAt: result.respondedAt,
+    isDeleted: result.isDeleted,
+    tokenSpent: result.tokenSpent,
+    tokenRefunded: result.tokenRefunded,
+    fullName: fullName?.fullName,
+    contacts:
+      result.contactStatus === ContactStatus.ACCEPTED ? contactData : [],
+  };
+
+  return biodataContact;
+};
+
 const getFilteredContact = async (
   filters: IContactFilterRequest,
   options: IPaginationOptions,
@@ -78,6 +142,7 @@ const getFilteredContact = async (
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
   const { searchTerm, type, status, ...filterData } = filters;
   const andConditions: Prisma.ContactAccessWhereInput[] = [];
+  console.log({ role, userId, type });
   // Search term
   if (searchTerm) {
     andConditions.push({
@@ -90,15 +155,8 @@ const getFilteredContact = async (
     });
   }
 
-  // Filter by status
-  // if (status) {
-  //   andConditions.push({
-  //     status: status,
-  //   });
-  // }
-
   // Role-based access filtering
-  if (role === 'USER') {
+  if (role === UserRole.USER) {
     if (type === 'sent') {
       andConditions.push({ senderId: userId });
     } else if (type === 'received') {
@@ -132,12 +190,26 @@ const getFilteredContact = async (
     skip,
     take: limit,
     include: {
-      // user: true,
-      biodata: {
+      sender: {
         include: {
-          addressInfoFormData: true,
+          biodatas: {
+            include: {
+              addressInfoFormData: true,
+              guardianContacts: true,
+            },
+          }, //
         },
-      }, // Include related data
+      },
+      receiver: {
+        include: {
+          biodatas: {
+            include: {
+              addressInfoFormData: true,
+              guardianContacts: true,
+            },
+          }, //
+        },
+      },
     },
     orderBy:
       options.sortBy && options.sortOrder
@@ -156,21 +228,38 @@ const getFilteredContact = async (
   });
 
   const ContactData = result.map(Contact => {
-    const currentAddress = Contact?.biodata?.addressInfoFormData?.find(
-      item => item.type === 'current_address',
-    );
-
-    const permanentAddresses = Contact?.biodata?.addressInfoFormData?.find(
-      item => item.type === 'permanent_address',
-    );
+    let currentAddress;
+    let permanentAddresses;
+    let contactData;
+    let biodata;
+    if (type === 'received') {
+      currentAddress = Contact?.sender?.biodatas?.addressInfoFormData?.find(
+        (item: any) => item.type === 'current_address',
+      );
+      permanentAddresses = Contact?.sender?.biodatas?.addressInfoFormData?.find(
+        (item: any) => item.type === 'permanent_address',
+      );
+      contactData = Contact?.sender?.biodatas?.guardianContacts;
+      biodata = Contact?.sender?.biodatas;
+    } else if (type === 'sent') {
+      currentAddress = Contact?.receiver?.biodatas?.addressInfoFormData?.find(
+        (item: any) => item.type === 'current_address',
+      );
+      permanentAddresses =
+        Contact?.receiver?.biodatas?.addressInfoFormData?.find(
+          (item: any) => item.type === 'permanent_address',
+        );
+      contactData = Contact?.receiver?.biodatas?.guardianContacts;
+      biodata = Contact?.receiver?.biodatas;
+    }
 
     return {
       id: Contact.id,
       senderId: Contact.senderId,
       receiverId: Contact.receiverId,
-      biodataId: Contact.biodataId,
-      bioNo: Contact?.biodata?.code,
-      bioVisibility: Contact?.biodata?.visibility,
+      biodataId: biodata?.id,
+      bioNo: biodata?.code,
+      bioVisibility: biodata?.visibility,
       bioPresentCity: currentAddress?.city,
       bioPresentState: currentAddress?.state,
       bioPermanentCity: permanentAddresses?.city,
@@ -182,6 +271,8 @@ const getFilteredContact = async (
       contactExpiredAt: Contact?.contactExpiredAt,
       contactStatus: Contact?.contactStatus,
       tokenRefunded: Contact?.tokenRefunded,
+      contacts:
+        Contact?.contactStatus === ContactStatus.ACCEPTED ? contactData : [],
     };
   });
 
@@ -363,6 +454,7 @@ const checkAndCancelExpiredRequests = async () => {
 export const ContactServices = {
   createAContact,
   getFilteredContact,
+  getContactByBiodataId,
   getAContact,
   updateContactResponse,
   deleteAContact,

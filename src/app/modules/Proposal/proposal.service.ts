@@ -98,6 +98,7 @@ const getFilteredProposal = async (
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
   const { searchTerm, type, status, ...filterData } = filters;
   const andConditions: Prisma.ProposalWhereInput[] = [];
+
   // Search term
   if (searchTerm) {
     andConditions.push({
@@ -118,7 +119,7 @@ const getFilteredProposal = async (
   // }
 
   // Role-based access filtering
-  if (role === 'USER') {
+  if (role === UserRole.USER) {
     if (type === 'sent') {
       andConditions.push({ senderId: userId });
     } else if (type === 'received') {
@@ -152,12 +153,26 @@ const getFilteredProposal = async (
     skip,
     take: limit,
     include: {
-      // user: true,
-      biodata: {
+      sender: {
         include: {
-          addressInfoFormData: true,
+          biodatas: {
+            include: {
+              addressInfoFormData: true,
+              guardianContacts: true,
+            },
+          }, //
         },
-      }, // Include related data
+      },
+      receiver: {
+        include: {
+          biodatas: {
+            include: {
+              addressInfoFormData: true,
+              guardianContacts: true,
+            },
+          }, //
+        },
+      },
     },
     orderBy:
       options.sortBy && options.sortOrder
@@ -174,23 +189,37 @@ const getFilteredProposal = async (
   const total = await prisma.proposal.count({
     where: whereConditions,
   });
-
   const proposalData = result.map(proposal => {
-    const currentAddress = proposal?.biodata?.addressInfoFormData?.find(
-      item => item.type === 'current_address',
-    );
-
-    const permanentAddresses = proposal?.biodata?.addressInfoFormData?.find(
-      item => item.type === 'permanent_address',
-    );
+    let currentAddress;
+    let permanentAddresses;
+    let biodata;
+    if (type === 'received') {
+      currentAddress = proposal?.sender?.biodatas?.addressInfoFormData?.find(
+        (item: any) => item.type === 'current_address',
+      );
+      permanentAddresses =
+        proposal?.sender?.biodatas?.addressInfoFormData?.find(
+          (item: any) => item.type === 'permanent_address',
+        );
+      biodata = proposal?.sender?.biodatas;
+    } else if (type === 'sent') {
+      currentAddress = proposal?.receiver?.biodatas?.addressInfoFormData?.find(
+        (item: any) => item.type === 'current_address',
+      );
+      permanentAddresses =
+        proposal?.receiver?.biodatas?.addressInfoFormData?.find(
+          (item: any) => item.type === 'permanent_address',
+        );
+      biodata = proposal?.receiver?.biodatas;
+    }
 
     return {
       id: proposal.id,
       senderId: proposal.senderId,
       receiverId: proposal.receiverId,
-      biodataId: proposal.biodataId,
-      bioNo: proposal?.biodata?.code,
-      bioVisibility: proposal?.biodata?.visibility,
+      biodataId: biodata?.id,
+      bioNo: biodata?.code,
+      bioVisibility: biodata?.visibility,
       bioPresentCity: currentAddress?.city,
       bioPresentState: currentAddress?.state,
       bioPermanentCity: permanentAddresses?.city,
