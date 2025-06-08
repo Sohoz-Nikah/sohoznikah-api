@@ -330,23 +330,43 @@ const updateContactResponse = async (
 
   if (!Contact) throw new ApiError(httpStatus.NOT_FOUND, 'Contact not found');
 
+  let result;
+
   if (payload.response === 'YES') {
-    return prisma.contactAccess.update({
+    result = await prisma.contactAccess.update({
       where: { id: ContactId },
       data: {
         contactStatus: ContactStatus.ACCEPTED,
         respondedAt: new Date(),
       },
     });
-  } else {
-    return prisma.contactAccess.update({
+  } else if (payload.response === 'NO') {
+    result = await prisma.contactAccess.update({
       where: { id: ContactId },
       data: {
         contactStatus: ContactStatus.REJECTED,
         respondedAt: new Date(),
       },
     });
+
+    await prisma.user.update({
+      where: { id: Contact.senderId },
+      data: {
+        token: { increment: 2 },
+      },
+    });
   }
+
+  await prisma.notification.create({
+    data: {
+      type: `${payload.response === 'YES' ? 'Contact Accepted' : 'Contact Rejected'}`,
+      message: `${payload.response === 'YES' ? 'Your contact request for biodata' : 'Your contact request for biodata'} ${Contact.biodataId} has been ${payload.response === 'YES' ? 'accepted' : 'rejected'}.`,
+      userId: Contact.senderId,
+      contactAccessId: ContactId,
+    },
+  });
+
+  return result;
 };
 
 const deleteAContact = async (
