@@ -142,7 +142,6 @@ const getFilteredContact = async (
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
   const { searchTerm, type, status, ...filterData } = filters;
   const andConditions: Prisma.ContactAccessWhereInput[] = [];
-  console.log({ role, userId, type });
   // Search term
   if (searchTerm) {
     andConditions.push({
