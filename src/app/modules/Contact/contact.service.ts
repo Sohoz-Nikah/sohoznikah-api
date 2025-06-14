@@ -59,8 +59,8 @@ const createAContact = async (
 
   await prisma.notification.create({
     data: {
-      type: 'Got New Contact',
-      message: `You have got new Contact from : ${existingUser.name}`,
+      type: 'CONTACT_REQUEST',
+      message: ` আপনার অভিভাবকের সাথে যোগাযোগের জন্য অনুরোধ এসেছে। রেসপন্স করুন।`,
       userId: existingBiodata.userId,
       contactAccessId: newContact.id,
     },
@@ -358,9 +358,9 @@ const updateContactResponse = async (
 
   await prisma.notification.create({
     data: {
-      type: `${payload.response === 'YES' ? 'Contact Accepted' : 'Contact Rejected'}`,
-      message: `${payload.response === 'YES' ? 'Your contact request for biodata' : 'Your contact request for biodata'} ${Contact.biodataId} has been ${payload.response === 'YES' ? 'accepted' : 'rejected'}.`,
-      userId: Contact.senderId,
+      type: `${payload.response === 'YES' ? 'CONTACT_ACCEPTED' : 'CONTACT_REJECTED'}`,
+      message: `${payload.response === 'YES' ? 'অপরপক্ষ যোগাযোগের অনুরোধ গ্রহণ করেছেন। যোগাযোগ নম্বর দেখুন। ' : 'অপরপক্ষ যোগাযোগের অনুরোধ প্রত্যাখ্যান করেছেন। '}`,
+      userId: Contact.receiverId,
       contactAccessId: ContactId,
     },
   });
@@ -456,7 +456,7 @@ const checkAndCancelExpiredRequests = async () => {
       await prisma.notification.create({
         data: {
           type: 'CONTACT_AUTO_CANCELLED',
-          message: `Your contact request for biodata ${request.biodataId} has been automatically cancelled due to expiration.`,
+          message: `৭২ ঘন্টা অতিক্রম হওয়ায় যোগাযোগের অনুরোধটি বাতিল হয়েছে। চাইলে আবার অনুরোধ পাঠাতে পারেন। যোগাযোগ নম্বর দেখুন।`,
           userId: request.senderId,
           contactAccessId: request.id,
         },

@@ -79,8 +79,8 @@ const createAProposal = async (
   // Optional: Log update
   await prisma.notification.create({
     data: {
-      type: 'Got New Proposal',
-      message: `You have got new proposal from : ${existingUser.name}`,
+      type: 'NEW_PROPOSAL',
+      message: ` একটি নতুন প্রস্তাব এসেছে।`,
       userId: existingBiodata.userId,
       proposalId: newProposal.id,
     },
@@ -313,6 +313,15 @@ const cancelProposal = async (proposalId: string, user: JwtPayload) => {
     );
   }
 
+  await prisma.notification.create({
+    data: {
+      type: 'PROPOSAL_CANCELLED',
+      message: `আপনি রেসপন্স না করায় অপরপক্ষ প্রস্তাবটি বাতিল করেছেন।`,
+      userId: proposal.receiverId,
+      proposalId: proposalId,
+    },
+  });
+
   return prisma.proposal.update({
     where: { id: proposalId, senderId: userId },
     data: { isCancelled: true },
@@ -340,6 +349,15 @@ const updateProposalResponse = async (
       },
     });
   }
+
+  await prisma.notification.create({
+    data: {
+      type: 'PROPOSAL_RESPONSE',
+      message: `অপরপক্ষ আপনার প্রস্তাবে রেসপন্স করেছেন।`,
+      userId: proposal.senderId,
+      proposalId: proposalId,
+    },
+  });
 
   return prisma.proposal.update({
     where: { id: proposalId },

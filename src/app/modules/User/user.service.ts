@@ -272,7 +272,7 @@ const giveToken = async (userId: string, payload: { token: number }) => {
   await prisma.notification.create({
     data: {
       type: 'TOKEN_GIVEN',
-      message: `You have been given ${token} tokens`,
+      message: `সহজনিকাহ থেকে আপনাকে ${token} টি টোকেন প্রদান করা হয়েছে।`,
       userId: userId,
     },
   });

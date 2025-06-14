@@ -16,15 +16,14 @@ const createAShortlist = async (
   const { biodataId } = payload;
   const { userId } = user;
 
-  if (biodataId) {
-    const existingBiodata = await prisma.biodata.findUnique({
-      where: { id: biodataId },
-    });
+  const existingBiodata = await prisma.biodata.findUnique({
+    where: { id: biodataId },
+  });
 
-    if (!existingBiodata) {
-      throw new ApiError(httpStatus.NOT_FOUND, 'Biodata not found');
-    }
+  if (!existingBiodata) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Biodata not found');
   }
+
   if (userId) {
     const existingUser = await prisma.user.findUnique({
       where: { id: userId },
@@ -101,8 +100,14 @@ const createAShortlist = async (
           isShortlisted: true,
         },
       });
-      console.log(updatedFavourite, 'favourite created');
     }
+    await prisma.notification.create({
+      data: {
+        type: 'SHORTLIST_CREATED',
+        message: `আপনার বায়োডাটা একজন চুড়ান্ত তালিকায় রেখেছে।`,
+        userId: existingBiodata?.userId,
+      },
+    });
     return newShortlist;
   }
 };

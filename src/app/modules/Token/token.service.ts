@@ -29,9 +29,8 @@ const createAToken = async (
 
   await prisma.notification.create({
     data: {
-      userId,
-      message: `Your token request has been created. Please wait for approval.`,
       type: 'TOKEN_CREATED',
+      adminMessage: `New Token request generated.`,
     },
   });
 
@@ -201,7 +200,7 @@ const updateAToken = async (
     await prisma.notification.create({
       data: {
         userId: existingToken.userId,
-        message: `Your token request has been approved`,
+        message: `আপনার ক্রয়কৃত ${existingToken.quantity} টি টোকেন প্রদান করা হয়েছে।`,
         type: 'TOKEN_APPROVED',
       },
     });

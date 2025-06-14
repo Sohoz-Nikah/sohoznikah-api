@@ -15,15 +15,15 @@ const createAFavourite = async (
 ): Promise<FavouriteBiodata | null> => {
   const { biodataId } = payload;
   const { userId } = user;
-  if (biodataId) {
-    const existingBiodata = await prisma.biodata.findUnique({
-      where: { id: biodataId },
-    });
 
-    if (!existingBiodata) {
-      throw new ApiError(httpStatus.NOT_FOUND, 'Biodata not found');
-    }
+  const existingBiodata = await prisma.biodata.findUnique({
+    where: { id: biodataId },
+  });
+
+  if (!existingBiodata) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Biodata not found');
   }
+
   if (userId) {
     const existingUser = await prisma.user.findUnique({
       where: { id: userId },
@@ -55,6 +55,14 @@ const createAFavourite = async (
     data: {
       biodataId,
       userId,
+    },
+  });
+
+  await prisma.notification.create({
+    data: {
+      type: 'FAVOURITE_CREATED',
+      message: `আপনার বায়োডাটা একজন পছন্দের তালিকায় রেখেছে।`,
+      userId: existingBiodata?.userId,
     },
   });
 

@@ -1,12 +1,12 @@
-import { NextFunction, Request, Response } from "express";
-import httpStatus from "http-status";
-import jwt, { JwtPayload } from "jsonwebtoken";
-import config from "../config";
-import ApiError from "../errors/ApiError";
-import catchAsync from "../shared/catchAsync";
-import prisma from "../shared/prisma";
-import isJWTIssuedBeforePasswordChanged from "./isJWTIssuedBeforePasswordChanged";
-import { UserRole, UserStatus } from "@prisma/client";
+import { UserRole, UserStatus } from '@prisma/client';
+import { NextFunction, Request, Response } from 'express';
+import httpStatus from 'http-status';
+import jwt, { JwtPayload } from 'jsonwebtoken';
+import config from '../config';
+import ApiError from '../errors/ApiError';
+import catchAsync from '../shared/catchAsync';
+import prisma from '../shared/prisma';
+import isJWTIssuedBeforePasswordChanged from './isJWTIssuedBeforePasswordChanged';
 
 const auth = (requiredRoles: string[] = []) => {
   return catchAsync(
@@ -15,7 +15,7 @@ const auth = (requiredRoles: string[] = []) => {
       if (!authHeader) {
         throw new ApiError(
           httpStatus.UNAUTHORIZED,
-          "Missing or malformed authorization token!"
+          'Missing or malformed authorization token!',
         );
       }
 
@@ -25,19 +25,19 @@ const auth = (requiredRoles: string[] = []) => {
       try {
         decoded = jwt.verify(
           token,
-          config.jwt.access_secret as string
+          config.jwt.access_secret as string,
         ) as JwtPayload;
       } catch {
         throw new ApiError(
           httpStatus.UNAUTHORIZED,
-          "Invalid or expired token!"
+          'Invalid or expired token!',
         );
       }
 
       const { userId, role, iat } = decoded;
 
       if (!userId || !role) {
-        throw new ApiError(httpStatus.UNAUTHORIZED, "Invalid token!");
+        throw new ApiError(httpStatus.UNAUTHORIZED, 'Invalid token!');
       }
 
       // Fetch user, role, and status in ONE optimized query
@@ -53,16 +53,16 @@ const auth = (requiredRoles: string[] = []) => {
       });
 
       if (!user) {
-        throw new ApiError(httpStatus.NOT_FOUND, "User does not exist");
+        throw new ApiError(httpStatus.NOT_FOUND, 'User does not exist');
       }
       if (user.isDeleted) {
-        throw new ApiError(httpStatus.FORBIDDEN, "User is deleted!");
+        throw new ApiError(httpStatus.FORBIDDEN, 'User is deleted!');
       }
-      if (user.status === UserStatus.PENDING) {
-        throw new ApiError(httpStatus.FORBIDDEN, "User status is pending!");
-      }
+      // if (user.status === UserStatus.PENDING) {
+      //   throw new ApiError(httpStatus.FORBIDDEN, "User status is pending!");
+      // }
       if (user.status === UserStatus.BLOCKED) {
-        throw new ApiError(httpStatus.FORBIDDEN, "User is blocked!");
+        throw new ApiError(httpStatus.FORBIDDEN, 'User is blocked!');
       }
 
       // Check if the token was issued before password change
@@ -72,7 +72,7 @@ const auth = (requiredRoles: string[] = []) => {
       ) {
         throw new ApiError(
           httpStatus.UNAUTHORIZED,
-          "Token issued before password change!"
+          'Token issued before password change!',
         );
       }
 
@@ -84,13 +84,13 @@ const auth = (requiredRoles: string[] = []) => {
 
       // ✅ Check role-based access for other users
       if (requiredRoles.length && !requiredRoles.includes(user.role)) {
-        throw new ApiError(httpStatus.FORBIDDEN, "Access denied!");
+        throw new ApiError(httpStatus.FORBIDDEN, 'Access denied!');
       }
 
       // ✅ Check route-specific permissions for non-superadmins
       req.user = decoded as JwtPayload & { role: string };
       next();
-    }
+    },
   );
 };
 

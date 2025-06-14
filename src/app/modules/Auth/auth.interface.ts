@@ -1,4 +1,6 @@
 export type ILoginUserResponse = {
+  email: string;
+  emailConfirmed: boolean;
   accessToken: string;
   refreshToken?: string;
 };

@@ -55,7 +55,15 @@ const getFilteredNotification = async (
   // Role-based filtering
   if (role === UserRole.USER) {
     andConditions.push({
-      OR: [{ userId: { equals: userId } }, { isGlobal: { equals: true } }],
+      OR: [
+        { userId: { equals: userId } },
+        { isGlobal: { equals: true } },
+        { isAdmin: { equals: false } },
+      ],
+    });
+  } else if (role === UserRole.SUPER_ADMIN || role === UserRole.ADMIN) {
+    andConditions.push({
+      OR: [{ isGlobal: { equals: true } }, { isAdmin: { equals: true } }],
     });
   }
   // SUPER_ADMIN can see all notifications, no additional conditions needed

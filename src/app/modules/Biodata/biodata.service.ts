@@ -70,16 +70,15 @@ async function handleBiodataOperation(
       biodata.status,
     );
 
-    // Create notification
-    await tx.notification.create({
-      data: {
-        type: biodataId ? 'UPDATE_BIODATA' : 'NEW_BIODATA',
-        message: `Biodata ${biodataId ? 'updated' : 'created'} by user ID: ${userId}`,
-        userId,
-        biodataId: biodata.id,
-        isGlobal: false,
-      },
-    });
+    // await tx.notification.create({
+    //   data: {
+    //     type: biodataId ? 'UPDATE_BIODATA' : 'NEW_BIODATA',
+    //     message: `Biodata ${biodataId ? 'updated' : 'created'} by user ID: ${userId}`,
+    //     userId,
+    //     biodataId: biodata.id,
+    //     isGlobal: false,
+    //   },
+    // });
 
     return biodata;
   });
@@ -1153,8 +1152,9 @@ const deleteABiodataRequest = async (
   await prisma.notification.create({
     data: {
       type: 'BIO_DELETE_REQUESTED',
-      message: `Biodata delete request by user ID: ${userId}`,
+      adminMessage: `You have got a biodata delete request.`,
       userId,
+      isAdmin: true,
       biodataId: payload?.biodataId,
     },
   });
@@ -1195,7 +1195,7 @@ const deleteABiodata = async (
     await prisma.notification.create({
       data: {
         type: 'BIO_DELETE_REQUESTED',
-        message: `Biodata delete request by user ID: ${userId}`,
+        message: `আপনার বায়োডাটা সফলভাবে ডিলিট করা হয়েছে।`,
         userId,
         biodataId,
       },
@@ -1206,7 +1206,7 @@ const deleteABiodata = async (
     await prisma.notification.create({
       data: {
         type: 'BIO_DELETE_SUCCESS',
-        message: `Biodata has been deleted successfully.`,
+        message: `আপনার বায়োডাটা সফলভাবে ডিলিট করা হয়েছে।`,
         userId: biodata.userId,
         biodataId,
       },

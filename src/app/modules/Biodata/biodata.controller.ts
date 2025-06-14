@@ -47,8 +47,9 @@ const getAllBiodata = catchAsync(async (req: Request, res: Response) => {
 
 const getABiodata = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
+  console.log('id', id);
   const result = await BiodataServices.getABiodata(id);
-
+  console.log('result', result);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,

@@ -19,6 +19,10 @@ const verifyEmailValidationSchema = z.object({
   }),
 });
 
+const resendOtpValidationSchema = z.object({
+  email: z.string().email(),
+});
+
 const loginValidationSchema = z.object({
   email: z
     .string({
@@ -47,10 +51,16 @@ const refreshTokenZodSchema = z.object({
   }),
 });
 
+const changeEmailValidationSchema = z.object({
+  email: z.string().email(),
+});
+
 export const AuthValidation = {
   createUserValidationSchema,
   verifyEmailValidationSchema,
   loginValidationSchema,
   changePasswordZodSchema,
   refreshTokenZodSchema,
+  resendOtpValidationSchema,
+  changeEmailValidationSchema,
 };

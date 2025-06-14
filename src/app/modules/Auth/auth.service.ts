@@ -86,7 +86,7 @@ const register = async (req: Request): Promise<Partial<User>> => {
     <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
       <h2 style="color: #4CAF50;">Email Verification</h2>
       <p>Dear ${req.body.name},</p>
-      <p>Thank you for registering with us. Please use the OTP below to verify your email:</p>
+      <p>Thank you for registering with SohozNikah. Please use the OTP below to verify your email:</p>
       <h3 style="color: #4CAF50;">${otp}</h3>
       <p>Or click the button below to verify directly:</p>
       <a href="${verfiryLink}" style="text-decoration: none; margin-top: 20px;">
@@ -94,7 +94,7 @@ const register = async (req: Request): Promise<Partial<User>> => {
       </a>
       <p>If you did not create an account, please ignore this email.</p>
       <p>Best regards,</p>
-      <p>The Seeds Team</p>
+      <p>The SohozNikah Team</p>
     </div>
     `,
   );
@@ -137,6 +137,137 @@ const verifyOtp = async (payload: Partial<User>) => {
   });
 };
 
+const resendOtp = async (payload: Partial<User>) => {
+  const { email } = payload;
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User does not exist');
+  }
+
+  const otp = crypto.randomInt(100000, 999999);
+  const otpExpiry = new Date(Date.now() + 15 * 60 * 1000);
+
+  const result = await prisma.user.update({
+    where: { email },
+    data: { otp, otpExpiry },
+  });
+
+  // Remove sensitive data
+  const safeUser = exclude(result, [
+    'emailConfirmed',
+    'passwordHash',
+    'refreshToken',
+    'refreshTokenExpiryTime',
+    'lockoutEnabled',
+    'lockoutEnd',
+    'failedAccessCount',
+    'otp',
+    'otpExpiry',
+    'passwordChangedAt',
+    'createdBy',
+    'updatedBy',
+    'createdAt',
+    'updatedAt',
+  ]);
+
+  // Email verification link with OTP
+  const verfiryLink: string = `${config.node_env === 'production' ? config.frontend_url.live : config.frontend_url.local}/verify-email?email=${email}&otp=${otp}`;
+
+  // Email content
+  const subject = 'Verify Your Email';
+
+  await sendEmail(
+    user.email,
+    subject,
+    `
+  <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+    <h2 style="color: #4CAF50;">Email Verification</h2>
+    <p>Dear ${user.name},</p>
+    <p>Thank you for requesting for new OTP with SohozNikah. Please use the OTP below to verify your email:</p>
+    <h3 style="color: #4CAF50;">${otp}</h3>
+    <p>Or click the button below to verify directly:</p>
+    <a href="${verfiryLink}" style="text-decoration: none; margin-top: 20px;">
+      <button style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">Verify Email</button>
+    </a>
+    <p>If you did not create an account, please ignore this email.</p>
+    <p>Best regards,</p>
+    <p>The SohozNikah Team</p>
+  </div>
+  `,
+  );
+
+  return safeUser;
+};
+
+const changeEmail = async (user: JwtPayload | null, payload: Partial<User>) => {
+  const { email } = payload;
+
+  const isUserExist = await prisma.user.findUnique({
+    where: { id: user?.userId },
+  });
+
+  if (!isUserExist) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User does not exist');
+  }
+
+  const otp = crypto.randomInt(100000, 999999);
+  const otpExpiry = new Date(Date.now() + 15 * 60 * 1000);
+
+  const result = await prisma.user.update({
+    where: { id: isUserExist.id },
+    data: { email, otp, otpExpiry },
+  });
+
+  // Remove sensitive data
+  const safeUser = exclude(result, [
+    'emailConfirmed',
+    'passwordHash',
+    'refreshToken',
+    'refreshTokenExpiryTime',
+    'lockoutEnabled',
+    'lockoutEnd',
+    'failedAccessCount',
+    'otp',
+    'otpExpiry',
+    'passwordChangedAt',
+    'createdBy',
+    'updatedBy',
+    'createdAt',
+    'updatedAt',
+  ]);
+
+  // Email verification link with OTP
+  const verfiryLink: string = `${config.node_env === 'production' ? config.frontend_url.live : config.frontend_url.local}/verify-email?email=${email}&otp=${otp}`;
+
+  // Email content
+  const subject = 'Verify Your Email';
+  await sendEmail(
+    safeUser.email,
+    subject,
+    `
+  <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+    <h2 style="color: #4CAF50;">Email Verification</h2>
+    <p>Dear ${safeUser.name},</p>
+    <p>Thank you for changing your email with SohozNikah. Please use the OTP below to verify your email:</p>
+    <h3 style="color: #4CAF50;">${otp}</h3>
+    <p>Or click the button below to verify directly:</p>
+    <a href="${verfiryLink}" style="text-decoration: none; margin-top: 20px;">
+      <button style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">Verify Email</button>
+    </a>
+    <p>If you did not create an account, please ignore this email.</p>
+    <p>Best regards,</p>
+    <p>The SohozNikah Team</p>
+  </div>
+  `,
+  );
+
+  return safeUser;
+};
+
 const loginUser = async (payload: ILoginUser): Promise<ILoginUserResponse> => {
   const { email, password } = payload;
 
@@ -160,12 +291,12 @@ const loginUser = async (payload: ILoginUser): Promise<ILoginUserResponse> => {
       'Your account is Blocked. Please contact support!!!',
     );
   }
-  if (isUserExist.status === UserStatus.PENDING) {
-    throw new ApiError(
-      httpStatus.FORBIDDEN,
-      'Please verify you email before login!!!',
-    );
-  }
+  // if (isUserExist.status === UserStatus.PENDING) {
+  //   throw new ApiError(
+  //     httpStatus.FORBIDDEN,
+  //     'Please verify you email before login!!!',
+  //   );
+  // }
 
   // Check password only if the user exists and is not deleted
   if (
@@ -175,7 +306,7 @@ const loginUser = async (payload: ILoginUser): Promise<ILoginUserResponse> => {
     throw new ApiError(httpStatus.NOT_FOUND, 'Password is incorrect');
   }
 
-  const { id: userId, role } = isUserExist;
+  const { id: userId, role, emailConfirmed } = isUserExist;
 
   // Generate JWT tokens
   const accessToken = jwtHelpers.createToken(
@@ -191,6 +322,8 @@ const loginUser = async (payload: ILoginUser): Promise<ILoginUserResponse> => {
   );
 
   return {
+    email,
+    emailConfirmed,
     accessToken,
     refreshToken,
   };
@@ -344,8 +477,8 @@ const forgotPass = async (email: string) => {
         </div>
         <div class="footer">
           <p>Thank you,</p>
-          <p>The [Your Company Name] Team</p>
-          <p><a href="mailto:support@yourcompany.com">Contact Support</a></p>
+          <p>The SohozNikah Team</p>
+          <p><a href="mailto:sohoznikah@gmail.com">Contact Support</a></p>
         </div>
       </div>
     </body>
@@ -397,6 +530,8 @@ const resetPassword = async (
 export const AuthServices = {
   register,
   verifyOtp,
+  resendOtp,
+  changeEmail,
   loginUser,
   changePassword,
   refreshToken,

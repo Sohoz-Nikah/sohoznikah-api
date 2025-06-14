@@ -29,6 +29,28 @@ const verifyOtp = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const resendOtp = catchAsync(async (req: Request, res: Response) => {
+  const result = await AuthServices.resendOtp(req.body);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.CREATED,
+    message: 'OTP resent successfully!!!',
+    data: result,
+  });
+});
+
+const changeEmail = catchAsync(async (req: Request, res: Response) => {
+  const result = await AuthServices.changeEmail(req.user, req.body);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.CREATED,
+    message: 'Email changed successfully!!!',
+    data: result,
+  });
+});
+
 const loginUser = catchAsync(async (req: Request, res: Response) => {
   const result = await AuthServices.loginUser(req.body);
   const { refreshToken } = result;
@@ -43,8 +65,12 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
   sendResponse<ILoginUserResponse>(res, {
     statusCode: 200,
     success: true,
-    message: 'User logged in successfully !',
+    message: result.emailConfirmed
+      ? 'User logged in successfully !'
+      : 'Please verify your email before login!!!',
     data: {
+      email: result.email,
+      emailConfirmed: result.emailConfirmed,
       accessToken: result.accessToken,
       refreshToken: result.refreshToken,
     },
@@ -124,6 +150,8 @@ const resetPassword = catchAsync(async (req: Request, res: Response) => {
 export const AuthControllers = {
   register,
   verifyOtp,
+  resendOtp,
+  changeEmail,
   loginUser,
   refreshToken,
   changePassword,

@@ -519,8 +519,8 @@ model ContactAccess {
     createdAt        DateTime      @default(now())
     isDeleted        Boolean       @default(false)
 
-    sender       User           @relation("ContactAccessSender", fields: [senderId], references: [id])
-    receiver     User           @relation("ContactAccessReceiver", fields: [receiverId], references: [id])
+    sender       User           @relation("ContactAccessSender", fields: [senderId], references: [id], onDelete: Cascade)
+    receiver     User           @relation("ContactAccessReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
     biodata      Biodata        @relation(fields: [biodataId], references: [id], onDelete: Cascade)
     Notification Notification[]
 
@@ -540,16 +540,18 @@ enum ContactStatus {
 model Notification {
     id              String   @id @default(uuid())
     type            String // e.g., "BIODATA_UPDATE", "NEW_BIODATA"
-    message         String
-    userId          String
+    message         String?
+    adminMessage    String?
+    userId          String?
     biodataId       String?
     proposalId      String?
     contactAccessId String?
     isGlobal        Boolean  @default(false)
+    isAdmin         Boolean  @default(false)
     isRead          Boolean  @default(false)
     createdAt       DateTime @default(now())
 
-    user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user          User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
     biodata       Biodata?       @relation(fields: [biodataId], references: [id], onDelete: Cascade)
     proposal      Proposal?      @relation(fields: [proposalId], references: [id], onDelete: Cascade)
     contactAccess ContactAccess? @relation(fields: [contactAccessId], references: [id], onDelete: Cascade)
