@@ -298,6 +298,13 @@ const getProposalByBiodataId = async (
     },
   });
 
+  if (!proposal) {
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      'You donot get any proposal from this biodata',
+    );
+  }
+
   return proposal;
 };
 

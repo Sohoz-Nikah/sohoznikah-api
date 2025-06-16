@@ -13,9 +13,10 @@ import routes from './app/routes';
 const app: Application = express();
 
 // ✅ 1. Configure CORS dynamically using env variables
-const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || [
-  'http://localhost:3000',
-  'http://localhost:5173',
+const allowedOrigins = [
+  process.env.FRONTEND_URL_LOCAL || 'http://localhost:3000',
+  process.env.FRONTEND_URL_LIVE || 'https://sohoznikah.com',
+  process.env.FRONTEND_URL_TEST || 'https://sohoznikah-app-rsh.vercel.app',
 ];
 
 app.use(
