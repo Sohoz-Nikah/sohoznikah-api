@@ -175,7 +175,7 @@ const resendOtp = async (payload: Partial<User>) => {
   ]);
 
   // Email verification link with OTP
-  const verfiryLink: string = `${config.node_env === 'production' ? config.frontend_url.live : config.frontend_url.local}/verify-email?email=${email}&otp=${otp}`;
+  const verfiryLink: string = `${config.frontend_url}/verify-email?email=${email}&otp=${otp}`;
 
   // Email content
   const subject = 'Verify Your Email';
@@ -241,7 +241,7 @@ const changeEmail = async (user: JwtPayload | null, payload: Partial<User>) => {
   ]);
 
   // Email verification link with OTP
-  const verfiryLink: string = `${config.node_env === 'production' ? config.frontend_url.live : config.frontend_url.local}/verify-email?email=${email}&otp=${otp}`;
+  const verfiryLink: string = `${config.frontend_url}/verify-email?email=${email}&otp=${otp}`;
 
   // Email content
   const subject = 'Verify Your Email';
