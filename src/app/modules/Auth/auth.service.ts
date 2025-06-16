@@ -75,7 +75,7 @@ const register = async (req: Request): Promise<Partial<User>> => {
   ]);
 
   // Email verification link with OTP
-  const verfiryLink: string = `${config.node_env === 'production' ? config.frontend_url.live : config.frontend_url.local}/verify-email?email=${req.body.email}&otp=${otp}`;
+  const verfiryLink: string = `${config.frontend_url}/verify-email?email=${req.body.email}&otp=${otp}`;
 
   // Email content
   const subject = 'Verify Your Email';
@@ -296,11 +296,7 @@ const forgotPass = async (email: string) => {
   const passResetToken = jwtHelpers.createPasswordResetToken({ id: user.id });
 
   // Construct reset password link
-  const resetLink = `${
-    config.node_env === 'production'
-      ? config.frontend_url.live
-      : config.frontend_url.local
-  }/reset-password?id=${user.id}&token=${passResetToken}`;
+  const resetLink = `${config.frontend_url}/reset-password?id=${user.id}&token=${passResetToken}`;
 
   // Ensure role is properly formatted
   const userRole = user.role || UserRole.USER; // Fallback if role is null/undefined
