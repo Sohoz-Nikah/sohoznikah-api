@@ -56,17 +56,22 @@ const getFilteredNotification = async (
   if (role === UserRole.USER) {
     andConditions.push({
       OR: [
-        { userId: { equals: userId } },
         { isGlobal: { equals: true } },
-        { isAdmin: { equals: false } },
+        {
+          AND: [{ userId: { equals: userId } }, { message: { not: null } }],
+        },
       ],
     });
-  } else if (role === UserRole.SUPER_ADMIN || role === UserRole.ADMIN) {
+  } else if (role === UserRole.ADMIN || role === UserRole.SUPER_ADMIN) {
     andConditions.push({
-      OR: [{ isGlobal: { equals: true } }, { isAdmin: { equals: true } }],
+      OR: [
+        { isGlobal: { equals: true } },
+        {
+          AND: [{ isAdmin: { equals: true } }, { adminMessage: { not: null } }],
+        },
+      ],
     });
   }
-  // SUPER_ADMIN can see all notifications, no additional conditions needed
 
   if (searchTerm) {
     andConditions.push({

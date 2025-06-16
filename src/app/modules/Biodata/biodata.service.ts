@@ -195,11 +195,29 @@ async function handleRelatedRecords(
           status: BiodataStatus.PENDING,
         },
       });
+      await prisma.notification.create({
+        data: {
+          type: 'NEW_BIODATA',
+          adminMessage: `A New Biodata has been created and is waiting for approval.`,
+          userId,
+          biodataId: biodataId,
+          isAdmin: true,
+        },
+      });
     } else if (status === BiodataStatus.UPDATE_REQUESTED) {
       await tx.biodata.update({
         where: { id: biodataId },
         data: {
           status: BiodataStatus.EDIT_PENDING,
+        },
+      });
+      await prisma.notification.create({
+        data: {
+          type: 'UPDATE_BIODATA',
+          adminMessage: `A Biodata has been updated and is waiting for approval.`,
+          userId,
+          biodataId: biodataId,
+          isAdmin: true,
         },
       });
     }
@@ -279,6 +297,7 @@ async function handleRelatedRecords(
     await tx.biodata.update({
       where: { id: biodataId },
       data: {
+        biodataType: primaryInfoFormData.biodataType,
         code: generatedId,
       },
     });
@@ -937,8 +956,9 @@ const getFilteredBiodata = async (
     profilePic: b.profilePic,
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
-    isFavourite: b.favouriteBiodata,
   }));
+
+  // console.log('data', data);
 
   return {
     meta: { page, limit, total },
@@ -971,7 +991,7 @@ const getABiodata = async (biodataId: string) => {
       personalInfoFormData: true,
       marriageInfoFormData: true,
       spousePreferenceInfoFormData: true,
-      guardianContacts: true,
+      // guardianContacts: true,
     },
   });
   if (!biodata) {
@@ -983,6 +1003,7 @@ const getABiodata = async (biodataId: string) => {
       totalViews: { increment: 1 },
     },
   });
+  // console.log('biodata', biodata);
   return biodata;
 };
 
@@ -1111,13 +1132,30 @@ const updateBiodataVisibility = async (
     throw new ApiError(httpStatus.NOT_FOUND, 'Biodata not found');
   }
 
-  return prisma.biodata.update({
+  const result = await prisma.biodata.update({
     where: { id: biodataId },
     data: {
       visibility: payload.visibility,
       status: payload.status,
     },
   });
+
+  await prisma.notification.create({
+    data: {
+      type: 'APPROVED_BIODATA',
+      message:
+        payload.status === 'APPROVED'
+          ? ` আপনার বায়োডাটা এপ্রুভ হয়েছে। `
+          : payload.status === 'REJECTED'
+            ? ` আপনার বায়োডাটা রিজেক্ট করা হয়েছে। `
+            : ` আপনার বায়োডাটা ডিলিট করা হয়েছে। `,
+      userId: biodata.userId,
+      biodataId: biodataId,
+      isAdmin: false,
+    },
+  });
+
+  return result;
 };
 
 const deleteABiodataRequest = async (
@@ -1169,7 +1207,7 @@ const deleteABiodata = async (
   const { userId, role } = user;
 
   const biodata = await prisma.biodata.findFirst({
-    where: { id: biodataId, userId },
+    where: { id: biodataId },
   });
 
   if (!biodata) {
@@ -1195,7 +1233,7 @@ const deleteABiodata = async (
     await prisma.notification.create({
       data: {
         type: 'BIO_DELETE_REQUESTED',
-        message: `আপনার বায়োডাটা সফলভাবে ডিলিট করা হয়েছে।`,
+        message: `আপনার বায়োডাটা ডিলিট করার জন্য রিকোয়েস্ট করা হয়েছে।`,
         userId,
         biodataId,
       },

@@ -4,6 +4,8 @@ const createUserValidationSchema = z.object({
   name: z.string(),
   email: z.string().email(),
   password: z.string(),
+  phoneNumber: z.string().min(11).max(13),
+  accountType: z.string(),
 });
 
 const verifyEmailValidationSchema = z.object({

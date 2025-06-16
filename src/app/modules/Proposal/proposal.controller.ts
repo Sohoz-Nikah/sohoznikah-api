@@ -57,7 +57,6 @@ const getAProposal = catchAsync(async (req: Request, res: Response) => {
 const getProposalByBiodataId = catchAsync(
   async (req: Request, res: Response) => {
     const { id } = req.params;
-    console.log(id);
     const result = await ProposalServices.getProposalByBiodataId(
       id,
       req.user as JwtPayload,
@@ -66,7 +65,7 @@ const getProposalByBiodataId = catchAsync(
     sendResponse(res, {
       statusCode: httpStatus.OK,
       success: true,
-      message: 'Received Proposal retrieved successfully',
+      message: 'Proposal status retrieved successfully',
       data: result,
     });
   },

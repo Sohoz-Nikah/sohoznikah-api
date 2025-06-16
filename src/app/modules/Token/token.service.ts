@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Prisma, Token, TokenStatus } from '@prisma/client';
+import { Prisma, Token, TokenStatus, UserRole } from '@prisma/client';
 import httpStatus from 'http-status';
 import { JwtPayload } from 'jsonwebtoken';
 import ApiError from '../../errors/ApiError';
@@ -31,6 +31,8 @@ const createAToken = async (
     data: {
       type: 'TOKEN_CREATED',
       adminMessage: `New Token request generated.`,
+      isAdmin: true,
+      userId: userId,
     },
   });
 
@@ -59,29 +61,9 @@ const getFilteredToken = async (
     });
   }
 
-  // if (role === UserRole.USER) {
-  //   if (type === 'sent') {
-  //     andConditions.push({ userId: userId });
-  //   } else if (type === 'received') {
-  //     andConditions.push({
-  //       biodata: {
-  //         userId: userId,
-  //       },
-  //     });
-  //   } else {
-  //     // Both types
-  //     andConditions.push({
-  //       OR: [
-  //         { userId: userId },
-  //         {
-  //           biodata: {
-  //             userId: userId,
-  //           },
-  //         },
-  //       ],
-  //     });
-  //   }
-  // }
+  if (role === UserRole.USER) {
+    andConditions.push({ userId: userId });
+  }
 
   // Add additional filters
   if (Object.keys(filterData).length > 0) {

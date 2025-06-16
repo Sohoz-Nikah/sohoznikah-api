@@ -268,26 +268,37 @@ const getAProposal = async (ProposalId: string, user: JwtPayload) => {
   return result;
 };
 
-const getProposalByBiodataId = async (biodataId: string, user: JwtPayload) => {
-  const { userId, role } = user;
-  let result: Proposal | null = null;
-  if (role === 'USER') {
-    result = await prisma.proposal.findFirst({
-      where: {
-        biodataId: biodataId,
-        OR: [{ receiverId: userId }, { senderId: userId }],
-      },
-    });
+const getProposalByBiodataId = async (
+  viewedBiodataId: string,
+  user: JwtPayload,
+) => {
+  const { userId } = user;
+  const myBiodata = await prisma.biodata.findUnique({ where: { userId } });
+  if (!myBiodata) throw new ApiError(httpStatus.BAD_REQUEST, 'No biodata');
+  const viewedBiodata = await prisma.biodata.findUnique({
+    where: { id: viewedBiodataId },
+  });
+  if (!viewedBiodata)
+    throw new ApiError(httpStatus.NOT_FOUND, 'Viewed biodata not found');
+  if (viewedBiodata.userId === userId) {
+    return { proposal: null, direction: null };
   }
+  const proposal = await prisma.proposal.findFirst({
+    where: {
+      OR: [
+        {
+          senderId: userId,
+          receiverId: viewedBiodata.userId,
+        },
+        {
+          senderId: viewedBiodata.userId,
+          receiverId: userId,
+        },
+      ],
+    },
+  });
 
-  if (!result) {
-    throw new ApiError(
-      httpStatus.NOT_FOUND,
-      'Donot received any proposal from this biodata.',
-    );
-  }
-
-  return result;
+  return proposal;
 };
 
 const cancelProposal = async (proposalId: string, user: JwtPayload) => {
