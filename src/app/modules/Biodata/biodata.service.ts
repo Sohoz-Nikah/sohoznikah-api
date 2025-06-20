@@ -800,6 +800,7 @@ async function handleRelatedRecords(
       religiousType,
       occupation,
       familyBackground,
+      blackSkinInterest,
       secondMarrige,
       location,
       qualities,
@@ -818,6 +819,7 @@ async function handleRelatedRecords(
         religiousType,
         occupation,
         familyBackground,
+        blackSkinInterest,
         secondMarrige,
         location,
         qualities,
@@ -837,6 +839,7 @@ async function handleRelatedRecords(
         religiousType,
         occupation,
         familyBackground,
+        blackSkinInterest,
         secondMarrige,
         location,
         qualities,
@@ -874,7 +877,6 @@ const getFilteredBiodata = async (
   filters: IBiodataFilterRequest,
   options: IPaginationOptions,
 ) => {
-  console.log('filters', filters);
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
 
   // 1) extract special keys:
@@ -903,17 +905,12 @@ const getFilteredBiodata = async (
     });
   }
 
-  // 4) root‐level scalar:
-  // if (currentState) {
-  //   and.push({ currentState: { equals: currentState } });
-  // }
-
-  // 5) numeric ranges:
+  // 4) numeric ranges:
   const rangeClauses = buildRangeConditions(filters, rangeConfigs);
   // console.log('rangeClauses', rangeClauses);
   and.push(...rangeClauses);
 
-  // 6) the rest of your filters:
+  // 5) the rest of your filters:
   const filterConditions = buildFilterConditions(
     restFilters,
     relationFieldMap as unknown as RelationMap,
@@ -922,8 +919,9 @@ const getFilteredBiodata = async (
     and.push(filterConditions);
   }
 
-  // 7) final where:
+  // 6) final where:
   const where: Prisma.BiodataWhereInput = and.length ? { AND: and } : {};
+  console.log('Final Where', JSON.stringify(where, null, 2));
 
   // 8) query + count:
   const [rows, total] = await Promise.all([
@@ -949,7 +947,7 @@ const getFilteredBiodata = async (
     }),
     prisma.biodata.count({ where }),
   ]);
-  console.log('rows', rows);
+  // console.log('rows', rows);
 
   // 9) map to DTO:
   const data = rows.map(b => ({
@@ -975,7 +973,7 @@ const getFilteredBiodata = async (
     updatedAt: b.updatedAt,
   }));
 
-  console.log('data', data);
+  // console.log('data', data);
 
   return {
     meta: { page, limit, total },

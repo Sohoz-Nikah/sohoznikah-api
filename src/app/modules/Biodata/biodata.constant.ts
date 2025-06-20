@@ -148,11 +148,32 @@ export const relationFieldMap: RelationMap = {
       relation: 'educationInfoFormData',
       field: 'type',
       isArray: true,
+      transform: (val: string) => {
+        const known = ['alia', 'qawmi'];
+        return known.includes(val) ? val : '';
+      },
     },
     {
-      relation: 'educationInfoFormData.educationDegrees',
+      relation: 'educationDegrees',
       field: 'degreeType',
       isArray: false,
+      transform: (val: string) => {
+        const known = [
+          'below_secondary',
+          'secondary',
+          'higher_secondary',
+          'diploma',
+          'bachelor',
+          'master',
+          'doctoral',
+          'medical',
+          'defense',
+          'police_law_enforcement',
+          'aviation',
+          'other',
+        ];
+        return known.includes(val) ? val : '';
+      },
     },
   ],
   religiousEducation: [
@@ -162,6 +183,12 @@ export const relationFieldMap: RelationMap = {
       isArray: true,
     },
   ],
+
+  // Religious Info
+  religiousLifestyle: [
+    { relation: 'religiousInfoFormData', field: 'type', isArray: false },
+  ],
+
   madhab: [
     { relation: 'religiousInfoFormData', field: 'madhab', isArray: false },
   ],
@@ -180,38 +207,60 @@ export const relationFieldMap: RelationMap = {
     },
   ],
 
-  // Religious Info
-  religiousLifestyle: [
-    { relation: 'religiousInfoFormData', field: 'madhab', isArray: false },
-  ],
-
   /* ============================ SPECIAL CATEGORY ============================ */
 
   specialCategory: [
+    // addressInfoFormData.cityzenshipStatus (1:M) ✅ keep using `some`
     {
-      relation: 'addressInfoFormData',
-      field: 'citizenshipStatus',
-      isArray: false,
+      relation: 'generalInfoFormData',
+      field: 'nationality',
+      isArray: true, // multiple addresses → use `some`
       transform: (val: string) => {
-        // map certain keys to actual stored statuses
-        const map: Record<string, string> = {
-          expatriate: 'expatriate',
-          foreign_citizen: 'yes',
-        };
-        return map[val] || '';
+        const known = ['foreign_citizen'];
+        return known.includes(val) ? val : '';
       },
     },
+
+    // maritalInfoFormData.continueStudy (1:1) ✅ use `is`
+    {
+      relation: 'maritalInfoFormData',
+      field: 'continueStudy',
+      isArray: false, // 1:1 → use `is`, but flag this in your logic
+      transform: (val: string) => (val === 'continueStudy' ? 'yes' : ''),
+    },
+
+    // maritalInfoFormData.careerPlan (1:1) ✅ use `is`
+    {
+      relation: 'maritalInfoFormData',
+      field: 'careerPlan',
+      isArray: false,
+      transform: (val: string) => (val === 'careerPlan' ? 'yes' : ''),
+    },
+    // personalInfoFormData.specialConditions (String[])
     {
       relation: 'personalInfoFormData',
       field: 'specialConditions',
       isArray: true,
-      transform: (val: string) => val,
-    },
-    {
-      relation: 'spousePreferenceInfoFormData',
-      field: 'specialCategory',
-      isArray: true,
-      transform: (val: string) => val,
+      transform: (val: string) => {
+        const known = [
+          'expatriate',
+          'bcs_cadre',
+          'social_worker',
+          'tabligh_member',
+          'religious_service',
+          'new_muslim',
+          'disabled',
+          'orphan',
+          'infertility_issues',
+          'short_divorced',
+          'single_father',
+          'short_height',
+          'older_age',
+          'urban_resident',
+          'rural_resident',
+        ];
+        return known.includes(val) ? val : '';
+      },
     },
   ],
 
@@ -228,10 +277,55 @@ export const relationFieldMap: RelationMap = {
   ],
 
   mySpecialCategory: [
+    // maritalInfoFormData.continueStudy (1:1) ✅ use `is`
     {
-      relation: 'addressInfoFormData',
-      field: 'citizenshipStatus',
+      relation: 'maritalInfoFormData',
+      field: 'continueStudy',
+      isArray: false, // 1:1 → use `is`, but flag this in your logic
+      transform: (val: string) => (val === 'continueStudy' ? 'yes' : ''),
+    },
+
+    // maritalInfoFormData.careerPlan (1:1) ✅ use `is`
+    {
+      relation: 'maritalInfoFormData',
+      field: 'careerPlan',
       isArray: false,
+      transform: (val: string) => (val === 'careerPlan' ? 'yes' : ''),
+    },
+    // spousePreferenceInfoFormData.specialCategory (String[])
+    {
+      relation: 'spousePreferenceInfoFormData',
+      field: 'blackSkinInterest',
+      isArray: false,
+      transform: (val: string) =>
+        val === 'blackSkinInterest' ? 'interested' : '',
+    },
+    {
+      relation: 'spousePreferenceInfoFormData',
+      field: 'specialCategory',
+      isArray: true,
+      transform: (val: string) => {
+        const known = [
+          'expatriate',
+          'foreign_citizen',
+          'bcs_cadre',
+          'social_worker',
+          'tabligh_member',
+          'religious_service',
+          'new_muslim',
+          'disabled',
+          'orphan',
+          'employed',
+          'infertility_issues',
+          'short_divorced',
+          'single_father',
+          'short_height',
+          'older_age',
+          'urban_resident',
+          'rural_resident',
+        ];
+        return known.includes(val) ? val : '';
+      },
     },
   ],
 };
