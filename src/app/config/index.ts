@@ -30,9 +30,5 @@ export default {
     email: process.env.EMAIL,
     app_pass: process.env.APP_PASS,
   },
-
-  frontend_url: {
-    local: process.env.FRONTEND_URL_LOCAL,
-    live: process.env.FRONTEND_URL_LIVE,
-  },
+  frontend_url: process.env.FRONTEND_URL,
 };

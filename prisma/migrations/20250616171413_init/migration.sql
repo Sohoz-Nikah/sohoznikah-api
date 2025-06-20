@@ -11,7 +11,7 @@ CREATE TYPE "VisibilityStatus" AS ENUM ('PUBLIC', 'PRIVATE');
 CREATE TYPE "BioDataType" AS ENUM ('GROOM', 'BRIDE');
 
 -- CreateEnum
-CREATE TYPE "BiodataStatus" AS ENUM ('PROCESSING', 'PENDING', 'APPROVED', 'REJECTED', 'UPDATE_REQUESTED', 'DELETE_REQUESTED', 'DELETED');
+CREATE TYPE "BiodataStatus" AS ENUM ('PROCESSING', 'PENDING', 'APPROVED', 'REJECTED', 'UPDATE_REQUESTED', 'EDIT_PENDING', 'DELETE_REQUESTED', 'DELETED');
 
 -- CreateEnum
 CREATE TYPE "ProposalStatus" AS ENUM ('PENDING', 'ACCEPTED', 'REJECTED', 'NEED_TIME', 'TOKEN_WITHDRAWN');
@@ -86,6 +86,7 @@ CREATE TABLE "Biodata" (
     "status" "BiodataStatus" NOT NULL DEFAULT 'PROCESSING',
     "visibility" "VisibilityStatus" NOT NULL DEFAULT 'PRIVATE',
     "biodataCompleted" INTEGER NOT NULL DEFAULT 0,
+    "totalViews" INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT "Biodata_pkey" PRIMARY KEY ("id")
 );
@@ -406,12 +407,14 @@ CREATE TABLE "ContactAccess" (
 CREATE TABLE "Notification" (
     "id" TEXT NOT NULL,
     "type" TEXT NOT NULL,
-    "message" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
+    "message" TEXT,
+    "adminMessage" TEXT,
+    "userId" TEXT,
     "biodataId" TEXT,
     "proposalId" TEXT,
     "contactAccessId" TEXT,
     "isGlobal" BOOLEAN NOT NULL DEFAULT false,
+    "isAdmin" BOOLEAN NOT NULL DEFAULT false,
     "isRead" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -656,10 +659,10 @@ ALTER TABLE "Proposal" ADD CONSTRAINT "Proposal_receiverId_fkey" FOREIGN KEY ("r
 ALTER TABLE "Proposal" ADD CONSTRAINT "Proposal_biodataId_fkey" FOREIGN KEY ("biodataId") REFERENCES "Biodata"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ContactAccess" ADD CONSTRAINT "ContactAccess_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ContactAccess" ADD CONSTRAINT "ContactAccess_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ContactAccess" ADD CONSTRAINT "ContactAccess_receiverId_fkey" FOREIGN KEY ("receiverId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ContactAccess" ADD CONSTRAINT "ContactAccess_receiverId_fkey" FOREIGN KEY ("receiverId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ContactAccess" ADD CONSTRAINT "ContactAccess_biodataId_fkey" FOREIGN KEY ("biodataId") REFERENCES "Biodata"("id") ON DELETE CASCADE ON UPDATE CASCADE;
