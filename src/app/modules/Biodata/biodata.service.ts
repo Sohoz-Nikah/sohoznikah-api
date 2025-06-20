@@ -225,18 +225,33 @@ async function handleRelatedRecords(
 
   // Handle Primary Info (Single Record) 10%
   if (primaryInfoFormData) {
-    let generatedId;
-    if (primaryInfoFormData.biodataType === BioDataType.GROOM) {
-      generatedId = await generateUniqueCode({
-        prefix: 'M',
-        model: 'biodata',
-        biodataType: BioDataType.GROOM,
-      });
-    } else if (primaryInfoFormData.biodataType === BioDataType.BRIDE) {
-      generatedId = await generateUniqueCode({
-        prefix: 'F',
-        model: 'biodata',
-        biodataType: BioDataType.BRIDE,
+    let existingBiodata = await tx.biodata.findUnique({
+      where: { id: biodataId },
+    });
+    if (
+      existingBiodata?.biodataType !== primaryInfoFormData.biodataType ||
+      !existingBiodata.code
+    ) {
+      let generatedId;
+      if (primaryInfoFormData.biodataType === BioDataType.GROOM) {
+        generatedId = await generateUniqueCode({
+          prefix: 'M',
+          model: 'biodata',
+          biodataType: BioDataType.GROOM,
+        });
+      } else if (primaryInfoFormData.biodataType === BioDataType.BRIDE) {
+        generatedId = await generateUniqueCode({
+          prefix: 'F',
+          model: 'biodata',
+          biodataType: BioDataType.BRIDE,
+        });
+      }
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          biodataType: primaryInfoFormData.biodataType,
+          code: generatedId,
+        },
       });
     }
 
@@ -293,14 +308,6 @@ async function handleRelatedRecords(
         },
       });
     }
-
-    await tx.biodata.update({
-      where: { id: biodataId },
-      data: {
-        biodataType: primaryInfoFormData.biodataType,
-        code: generatedId,
-      },
-    });
   }
 
   // Handle General Info (Single Record) 10%
@@ -401,7 +408,7 @@ async function handleRelatedRecords(
     await tx.biodataEducationInfo.upsert({
       where: { biodataId },
       update: {
-        type,
+        type: type as any,
         highestDegree,
         religiousEducation,
         detail,
@@ -410,7 +417,7 @@ async function handleRelatedRecords(
       },
       create: {
         biodataId,
-        type,
+        type: type as any,
         highestDegree,
         religiousEducation,
         detail,
@@ -867,6 +874,7 @@ const getFilteredBiodata = async (
   filters: IBiodataFilterRequest,
   options: IPaginationOptions,
 ) => {
+  console.log('filters', filters);
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
 
   // 1) extract special keys:
@@ -908,7 +916,7 @@ const getFilteredBiodata = async (
   // 6) the rest of your filters:
   const filterConditions = buildFilterConditions(
     restFilters,
-    relationFieldMap as RelationMap,
+    relationFieldMap as unknown as RelationMap,
   );
   if (Object.keys(filterConditions).length) {
     and.push(filterConditions);
@@ -941,6 +949,7 @@ const getFilteredBiodata = async (
     }),
     prisma.biodata.count({ where }),
   ]);
+  console.log('rows', rows);
 
   // 9) map to DTO:
   const data = rows.map(b => ({
@@ -951,14 +960,22 @@ const getFilteredBiodata = async (
     birthYear: b.generalInfoFormData?.[0]?.dateOfBirth,
     maritalStatus: b.generalInfoFormData?.[0]?.maritalStatus,
     height: b.generalInfoFormData?.[0]?.height,
-    permanentAddress: b.addressInfoFormData?.[0]?.location,
+    permanentAddress:
+      b.addressInfoFormData.find(a => a.type === 'permanent_address')
+        ?.location === 'bangladesh'
+        ? b.addressInfoFormData.find(a => a.type === 'permanent_address')
+            ?.state +
+          ', ' +
+          b.addressInfoFormData.find(a => a.type === 'permanent_address')?.city
+        : b.addressInfoFormData.find(a => a.type === 'permanent_address')
+            ?.location,
     occupation: b.occupationInfoFormData?.[0]?.occupations,
     profilePic: b.profilePic,
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
   }));
 
-  // console.log('data', data);
+  console.log('data', data);
 
   return {
     meta: { page, limit, total },

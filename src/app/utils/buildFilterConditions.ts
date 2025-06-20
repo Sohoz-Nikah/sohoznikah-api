@@ -1,6 +1,11 @@
 export type RelationMap = Record<
   string,
-  { relation: string; field: string; isArray?: boolean }
+  {
+    relation: string;
+    field: string;
+    isArray?: boolean;
+    transform?: (value: string) => string;
+  }[]
 >;
 
 export function buildFilterConditions(
@@ -9,55 +14,42 @@ export function buildFilterConditions(
 ): Record<string, any> {
   const direct: any[] = [];
   const rels: Record<string, any[]> = {};
+  console.log('filterData', filterData);
+  console.log('--------------------------------');
 
   for (const [key, value] of Object.entries(filterData)) {
     if (value == null || value === '') continue;
 
-    const mapping = relationFieldMap[key];
-    const values = Array.isArray(value)
+    const mappings = relationFieldMap[key];
+    const rawValues = Array.isArray(value)
       ? value
       : String(value)
           .split(',')
           .map(v => v.trim());
 
-    if (mapping) {
-      const { relation, field, isArray } = mapping;
-      rels[relation] ||= [];
+    if (mappings) {
+      for (const { relation, field, isArray, transform } of mappings) {
+        rels[relation] ||= [];
 
-      if (isArray) {
-        rels[relation].push({
-          [field]: {
-            hasSome: values, // for String[] fields like occupations
-          },
-        });
-      } else {
-        if (values.length > 1) {
+        // Apply transform if available
+        const values = transform ? rawValues.map(v => transform(v)) : rawValues;
+
+        if (isArray) {
           rels[relation].push({
-            [field]: {
-              in: values, // for scalar string with multiple values
-            },
+            [field]: { hasSome: values },
           });
         } else {
           rels[relation].push({
-            [field]: {
-              equals: values[0], // exact match for one value
-            },
+            [field]: values.length > 1 ? { in: values } : { equals: values[0] },
           });
         }
       }
     } else {
+      const values = rawValues;
       if (values.length > 1) {
-        direct.push({
-          [key]: {
-            in: values,
-          },
-        });
+        direct.push({ [key]: { in: values } });
       } else {
-        direct.push({
-          [key]: {
-            equals: values[0],
-          },
-        });
+        direct.push({ [key]: { equals: values[0] } });
       }
     }
   }
@@ -67,15 +59,10 @@ export function buildFilterConditions(
   for (const [relation, conditions] of Object.entries(rels)) {
     where.AND = [
       ...(where.AND ?? []),
-      {
-        [relation]: {
-          some: {
-            AND: conditions,
-          },
-        },
-      },
+      { [relation]: { some: { AND: conditions } } },
     ];
   }
-
+  console.log('where', JSON.stringify(where, null, 2));
+  console.log('--------------------------------');
   return where;
 }

@@ -235,7 +235,7 @@ model BiodataAddressInfo {
 model BiodataEducationInfo {
     id                 String    @id @default(uuid())
     biodataId          String    @unique
-    type               String
+    type               String[]
     highestDegree      String
     religiousEducation String[]
     detail             String?
@@ -409,11 +409,12 @@ model BiodataSpousePreferenceInfo {
     maritalStatus                     String[]
     specialCategory                   String[]
     religiousType                     String[]
-    occupation                        String[]
+    occupation                        String?
     familyBackground                  String[]
     secondMarrige                     String?
     location                          String?
     qualities                         String?
+    blackSkinInterest                 String?
     createdBy                         String?
     createdAt                         DateTime  @default(now())
     updatedBy                         String?

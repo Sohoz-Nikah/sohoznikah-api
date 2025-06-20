@@ -1,5 +1,5 @@
 // src/app/modules/Biodata/biodata.constant.ts
-
+import { RelationMap } from '../../utils/buildFilterConditions';
 import { RangeConfig } from './biodata.interface';
 
 export const BiodataSearchAbleFields: string[] = ['code'];
@@ -13,149 +13,227 @@ export const BiodataFilterableFields: string[] = [
   'heightMin',
   'heightMax',
   'skinTone',
-  'currentState',
+  'permanentLocation',
   'permanentState',
-  'permanentDistrict',
-  'currentDistrict',
-  'religiousLifestyle',
-  'occupation',
+  'permanentCity',
+  'currentLocation',
+  'currentState',
+  'currentCity',
   'education',
   'religiousEducation',
+  'religiousLifestyle',
+  'occupation',
   'familyStatus',
-  'madhhab',
+  'madhab',
   'bloodGroup',
   'specialCategory',
-  'partnerBiodataType',
-  'partnerMaritalStatus',
-  'partnerAgeMin',
-  'partnerAgeMax',
-  'partnerHeightMin',
-  'partnerHeightMax',
-  'partnerSkinTone',
+  'myBiodataType',
+  'mySpecialCategory',
+  'myMaritalStatus',
+  'myAgeMin',
+  'myAgeMax',
+  'myHeightMin',
+  'myHeightMax',
+  'mySkinTone',
 ];
 
-export const relationFieldMap: Record<
-  string,
-  { relation: string; field: string; isArray: boolean }
-> = {
+export const relationFieldMap: RelationMap = {
   // Primary Info (biodataType)
-  biodataType: {
-    relation: 'primaryInfoFormData',
-    field: 'biodataType',
-    isArray: false,
-  },
+  biodataType: [
+    { relation: 'primaryInfoFormData', field: 'biodataType', isArray: false },
+  ],
 
   // General Info
-  maritalStatus: {
-    relation: 'generalInfoFormData',
-    field: 'maritalStatus',
-    isArray: false,
-  },
-  skinTone: {
-    relation: 'generalInfoFormData',
-    field: 'skinTone',
-    isArray: false,
-  },
-  bloodGroup: {
-    relation: 'generalInfoFormData',
-    field: 'bloodGroup',
-    isArray: false,
-  },
-  currentState: {
-    relation: 'addressInfoFormData',
-    field: 'state',
-    isArray: true,
-  },
-  permanentState: {
-    relation: 'addressInfoFormData',
-    field: 'permanentState',
-    isArray: true,
-  },
-  permanentDistrict: {
-    relation: 'addressInfoFormData',
-    field: 'permanentDistrict',
-    isArray: true,
-  },
-  currentDistrict: {
-    relation: 'addressInfoFormData',
-    field: 'currentDistrict',
-    isArray: true,
-  },
-  currentCity: {
-    relation: 'addressInfoFormData',
-    field: 'currentCity',
-    isArray: true,
-  },
-  permanentCity: {
-    relation: 'addressInfoFormData',
-    field: 'permanentCity',
-    isArray: true,
-  },
-  curentLocation: {
-    relation: 'addressInfoFormData',
-    field: 'currentLocation',
-    isArray: false,
-  },
-  permanentLocation: {
-    relation: 'addressInfoFormData',
-    field: 'permanentLocation',
-    isArray: false,
-  },
+  maritalStatus: [
+    { relation: 'generalInfoFormData', field: 'maritalStatus', isArray: false },
+  ],
+  skinTone: [
+    { relation: 'generalInfoFormData', field: 'skinTone', isArray: false },
+  ],
+  bloodGroup: [
+    { relation: 'generalInfoFormData', field: 'bloodGroup', isArray: false },
+  ],
+
+  // Address Info - permanent
+  permanentLocation: [
+    {
+      relation: 'addressInfoFormData',
+      field: 'location',
+      isArray: false,
+      transform: v => v,
+    },
+    {
+      relation: 'addressInfoFormData',
+      field: 'type',
+      isArray: false,
+      transform: () => 'permanent_address',
+    },
+  ],
+  permanentState: [
+    {
+      relation: 'addressInfoFormData',
+      field: 'state',
+      isArray: false,
+      transform: v => v,
+    },
+    {
+      relation: 'addressInfoFormData',
+      field: 'type',
+      isArray: false,
+      transform: () => 'permanent_address',
+    },
+  ],
+  permanentCity: [
+    {
+      relation: 'addressInfoFormData',
+      field: 'city',
+      isArray: false,
+      transform: v => v,
+    },
+    {
+      relation: 'addressInfoFormData',
+      field: 'type',
+      isArray: false,
+      transform: () => 'permanent_address',
+    },
+  ],
+
+  // Current address if needed (same structure)
+  currentLocation: [
+    {
+      relation: 'addressInfoFormData',
+      field: 'location',
+      isArray: false,
+      transform: v => v,
+    },
+    {
+      relation: 'addressInfoFormData',
+      field: 'type',
+      isArray: false,
+      transform: () => 'current_address',
+    },
+  ],
+  currentState: [
+    {
+      relation: 'addressInfoFormData',
+      field: 'state',
+      isArray: false,
+      transform: v => v,
+    },
+    {
+      relation: 'addressInfoFormData',
+      field: 'type',
+      isArray: false,
+      transform: () => 'current_address',
+    },
+  ],
+  currentCity: [
+    {
+      relation: 'addressInfoFormData',
+      field: 'city',
+      isArray: false,
+      transform: v => v,
+    },
+    {
+      relation: 'addressInfoFormData',
+      field: 'type',
+      isArray: false,
+      transform: () => 'current_address',
+    },
+  ],
 
   // Education Info
-  madhhab: {
-    relation: 'religiousInfoFormData',
-    field: 'madhhab',
-    isArray: false,
-  },
-  education: {
-    relation: 'educationDegrees',
-    field: 'degreeType',
-    isArray: false,
-  },
-  religiousEducation: {
-    relation: 'educationInfoFormData',
-    field: 'religiousEducation',
-    isArray: true,
-  },
+  education: [
+    {
+      relation: 'educationInfoFormData',
+      field: 'type',
+      isArray: true,
+    },
+    {
+      relation: 'educationInfoFormData.educationDegrees',
+      field: 'degreeType',
+      isArray: false,
+    },
+  ],
+  religiousEducation: [
+    {
+      relation: 'educationInfoFormData',
+      field: 'religiousEducation',
+      isArray: true,
+    },
+  ],
+  madhab: [
+    { relation: 'religiousInfoFormData', field: 'madhab', isArray: false },
+  ],
 
   // Occupation Info
-  occupation: {
-    relation: 'occupationInfoFormData',
-    field: 'occupations',
-    isArray: true,
-  },
+  occupation: [
+    { relation: 'occupationInfoFormData', field: 'occupations', isArray: true },
+  ],
 
   // Family Info
-  familyStatus: {
-    relation: 'familyInfoFormData',
-    field: 'familyBackground',
-    isArray: false,
-  },
+  familyStatus: [
+    {
+      relation: 'familyInfoFormData',
+      field: 'familyBackground',
+      isArray: false,
+    },
+  ],
 
   // Religious Info
-  religiousLifestyle: {
-    relation: 'religiousInfoFormData',
-    field: 'type',
-    isArray: false,
-  },
+  religiousLifestyle: [
+    { relation: 'religiousInfoFormData', field: 'madhab', isArray: false },
+  ],
+
+  /* ============================ SPECIAL CATEGORY ============================ */
+
+  specialCategory: [
+    {
+      relation: 'addressInfoFormData',
+      field: 'citizenshipStatus',
+      isArray: false,
+      transform: (val: string) => {
+        // map certain keys to actual stored statuses
+        const map: Record<string, string> = {
+          expatriate: 'expatriate',
+          foreign_citizen: 'yes',
+        };
+        return map[val] || '';
+      },
+    },
+    {
+      relation: 'personalInfoFormData',
+      field: 'specialConditions',
+      isArray: true,
+      transform: (val: string) => val,
+    },
+    {
+      relation: 'spousePreferenceInfoFormData',
+      field: 'specialCategory',
+      isArray: true,
+      transform: (val: string) => val,
+    },
+  ],
+
+  /* ============================ MY FILTERS ==================================== */
 
   // Spouse Preferences (partner filters)
-  partnerBiodataType: {
-    relation: 'spousePreferenceInfoFormData',
-    field: 'age',
-    isArray: false,
-  },
-  partnerMaritalStatus: {
-    relation: 'spousePreferenceInfoFormData',
-    field: 'maritalStatus',
-    isArray: true,
-  },
-  specialCategory: {
-    relation: 'spousePreferenceInfoFormData',
-    field: 'specialCategory',
-    isArray: true,
-  },
+  myBiodataType: [
+    {
+      relation: 'primaryInfoFormData',
+      field: 'biodataType',
+      isArray: false,
+      transform: (value: string) => (value === 'GROOM' ? 'BRIDE' : 'GROOM'),
+    },
+  ],
+
+  mySpecialCategory: [
+    {
+      relation: 'addressInfoFormData',
+      field: 'citizenshipStatus',
+      isArray: false,
+    },
+  ],
 };
 
 export const rangeConfigs: RangeConfig[] = [

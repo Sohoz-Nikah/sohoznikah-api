@@ -42,15 +42,6 @@ const createAShortlist = async (
   });
 
   if (existingShortlist) {
-    await prisma.favouriteBiodata.delete({
-      where: {
-        userId_biodataId: {
-          userId,
-          biodataId,
-        },
-      },
-    });
-
     await prisma.shortlistBiodata.delete({
       where: {
         id: existingShortlist.id,
@@ -90,7 +81,7 @@ const createAShortlist = async (
           isShortlisted: true,
         },
       });
-      console.log(updatedFavourite, 'favourite updated');
+      // console.log(updatedFavourite, 'favourite updated');
     } else {
       // Optional: create it instead
       updatedFavourite = await prisma.favouriteBiodata.create({
@@ -241,14 +232,6 @@ const deleteAShortlist = async (ShortlistId: string, user: JwtPayload) => {
     if (!existingShortlist) {
       throw new ApiError(httpStatus.NOT_FOUND, 'Shortlist not found');
     }
-    await prisma.favouriteBiodata.delete({
-      where: {
-        userId_biodataId: {
-          userId,
-          biodataId: existingShortlist.biodataId,
-        },
-      },
-    });
 
     await prisma.shortlistBiodata.delete({
       where: {
@@ -267,15 +250,6 @@ const deleteAShortlist = async (ShortlistId: string, user: JwtPayload) => {
     if (!existingShortlist) {
       throw new ApiError(httpStatus.NOT_FOUND, 'Shortlist not found');
     }
-
-    await prisma.favouriteBiodata.delete({
-      where: {
-        userId_biodataId: {
-          userId: existingShortlist.userId,
-          biodataId: existingShortlist.biodataId,
-        },
-      },
-    });
 
     await prisma.shortlistBiodata.delete({
       where: {
