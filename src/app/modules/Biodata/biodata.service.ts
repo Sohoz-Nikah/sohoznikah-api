@@ -922,9 +922,23 @@ const getFilteredBiodata = async (
   // 6) final where:
   const where: Prisma.BiodataWhereInput = and.length ? { AND: and } : {};
   console.log('Final Where', JSON.stringify(where, null, 2));
+  // const maritalData = await prisma.biodataMarriageInfo.findMany({
+  //   select: {
+  //     continueStudy: true,
+  //     careerPlan: true,
+  //   },
+  // });
+  // console.log('Marital data sample:', maritalData);
+
+  // const spousePrefs = await prisma.biodataSpousePreferenceInfo.findMany({
+  //   select: {
+  //     specialCategory: true,
+  //   },
+  // });
+  // console.log('Spouse preference data sample:', spousePrefs);
 
   // 8) query + count:
-  const [rows, total] = await Promise.all([
+  const [rows, filteredRows] = await Promise.all([
     prisma.biodata.findMany({
       where,
       skip,
@@ -945,19 +959,23 @@ const getFilteredBiodata = async (
           ? { [options.sortBy]: options.sortOrder }
           : { id: 'desc' },
     }),
-    prisma.biodata.count({ where }),
+    prisma.biodata.findMany({
+      where,
+      select: { id: true }, // Select only the id to minimize data transfer
+    }),
   ]);
-  // console.log('rows', rows);
+
+  const total = filteredRows.length;
 
   // 9) map to DTO:
   const data = rows.map(b => ({
     id: b.id,
     code: b.code,
-    biodataType: b.primaryInfoFormData?.[0]?.biodataType,
-    fullName: b.primaryInfoFormData?.[0]?.fullName,
-    birthYear: b.generalInfoFormData?.[0]?.dateOfBirth,
-    maritalStatus: b.generalInfoFormData?.[0]?.maritalStatus,
-    height: b.generalInfoFormData?.[0]?.height,
+    biodataType: b.primaryInfoFormData?.biodataType ?? null,
+    fullName: b.primaryInfoFormData?.fullName ?? null,
+    birthYear: b.generalInfoFormData?.dateOfBirth ?? null,
+    maritalStatus: b.generalInfoFormData?.maritalStatus ?? null,
+    height: b.generalInfoFormData?.height ?? null,
     permanentAddress:
       b.addressInfoFormData.find(a => a.type === 'permanent_address')
         ?.location === 'bangladesh'
@@ -967,13 +985,11 @@ const getFilteredBiodata = async (
           b.addressInfoFormData.find(a => a.type === 'permanent_address')?.city
         : b.addressInfoFormData.find(a => a.type === 'permanent_address')
             ?.location,
-    occupation: b.occupationInfoFormData?.[0]?.occupations,
+    occupation: b.occupationInfoFormData?.occupations,
     profilePic: b.profilePic,
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
   }));
-
-  // console.log('data', data);
 
   return {
     meta: { page, limit, total },

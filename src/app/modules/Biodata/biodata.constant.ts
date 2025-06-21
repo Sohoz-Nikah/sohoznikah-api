@@ -40,18 +40,36 @@ export const BiodataFilterableFields: string[] = [
 export const relationFieldMap: RelationMap = {
   // Primary Info (biodataType)
   biodataType: [
-    { relation: 'primaryInfoFormData', field: 'biodataType', isArray: false },
+    {
+      relation: 'primaryInfoFormData',
+      field: 'biodataType',
+      isArray: false,
+      useIs: true,
+    },
   ],
-
-  // General Info
   maritalStatus: [
-    { relation: 'generalInfoFormData', field: 'maritalStatus', isArray: false },
+    {
+      relation: 'generalInfoFormData',
+      field: 'maritalStatus',
+      isArray: false,
+      useIs: true,
+    },
   ],
   skinTone: [
-    { relation: 'generalInfoFormData', field: 'skinTone', isArray: false },
+    {
+      relation: 'generalInfoFormData',
+      field: 'skinTone',
+      isArray: false,
+      useIs: true,
+    },
   ],
   bloodGroup: [
-    { relation: 'generalInfoFormData', field: 'bloodGroup', isArray: false },
+    {
+      relation: 'generalInfoFormData',
+      field: 'bloodGroup',
+      isArray: false,
+      useIs: true,
+    },
   ],
 
   // Address Info - permanent
@@ -148,6 +166,7 @@ export const relationFieldMap: RelationMap = {
       relation: 'educationInfoFormData',
       field: 'type',
       isArray: true,
+      useIs: true,
       transform: (val: string) => {
         const known = ['alia', 'qawmi'];
         return known.includes(val) ? val : '';
@@ -157,6 +176,7 @@ export const relationFieldMap: RelationMap = {
       relation: 'educationDegrees',
       field: 'degreeType',
       isArray: false,
+      useIs: false,
       transform: (val: string) => {
         const known = [
           'below_secondary',
@@ -181,21 +201,37 @@ export const relationFieldMap: RelationMap = {
       relation: 'educationInfoFormData',
       field: 'religiousEducation',
       isArray: true,
+      useIs: true,
     },
   ],
 
   // Religious Info
   religiousLifestyle: [
-    { relation: 'religiousInfoFormData', field: 'type', isArray: false },
+    {
+      relation: 'religiousInfoFormData',
+      field: 'type',
+      isArray: false,
+      useIs: true,
+    },
   ],
 
   madhab: [
-    { relation: 'religiousInfoFormData', field: 'madhab', isArray: false },
+    {
+      relation: 'religiousInfoFormData',
+      field: 'madhab',
+      isArray: false,
+      useIs: true,
+    },
   ],
 
   // Occupation Info
   occupation: [
-    { relation: 'occupationInfoFormData', field: 'occupations', isArray: true },
+    {
+      relation: 'occupationInfoFormData',
+      field: 'occupations',
+      isArray: true,
+      useIs: true,
+    },
   ],
 
   // Family Info
@@ -204,6 +240,7 @@ export const relationFieldMap: RelationMap = {
       relation: 'familyInfoFormData',
       field: 'familyBackground',
       isArray: false,
+      useIs: true,
     },
   ],
 
@@ -214,7 +251,8 @@ export const relationFieldMap: RelationMap = {
     {
       relation: 'generalInfoFormData',
       field: 'nationality',
-      isArray: true, // multiple addresses → use `some`
+      isArray: true,
+      useIs: true,
       transform: (val: string) => {
         const known = ['foreign_citizen'];
         return known.includes(val) ? val : '';
@@ -225,7 +263,8 @@ export const relationFieldMap: RelationMap = {
     {
       relation: 'maritalInfoFormData',
       field: 'continueStudy',
-      isArray: false, // 1:1 → use `is`, but flag this in your logic
+      isArray: false,
+      useIs: true,
       transform: (val: string) => (val === 'continueStudy' ? 'yes' : ''),
     },
 
@@ -234,6 +273,7 @@ export const relationFieldMap: RelationMap = {
       relation: 'maritalInfoFormData',
       field: 'careerPlan',
       isArray: false,
+      useIs: true,
       transform: (val: string) => (val === 'careerPlan' ? 'yes' : ''),
     },
     // personalInfoFormData.specialConditions (String[])
@@ -241,6 +281,7 @@ export const relationFieldMap: RelationMap = {
       relation: 'personalInfoFormData',
       field: 'specialConditions',
       isArray: true,
+      useIs: true,
       transform: (val: string) => {
         const known = [
           'expatriate',
@@ -272,6 +313,7 @@ export const relationFieldMap: RelationMap = {
       relation: 'primaryInfoFormData',
       field: 'biodataType',
       isArray: false,
+      useIs: true,
       transform: (value: string) => (value === 'GROOM' ? 'BRIDE' : 'GROOM'),
     },
   ],
@@ -281,7 +323,8 @@ export const relationFieldMap: RelationMap = {
     {
       relation: 'maritalInfoFormData',
       field: 'continueStudy',
-      isArray: false, // 1:1 → use `is`, but flag this in your logic
+      isArray: false,
+      useIs: true,
       transform: (val: string) => (val === 'continueStudy' ? 'yes' : ''),
     },
 
@@ -290,6 +333,7 @@ export const relationFieldMap: RelationMap = {
       relation: 'maritalInfoFormData',
       field: 'careerPlan',
       isArray: false,
+      useIs: true,
       transform: (val: string) => (val === 'careerPlan' ? 'yes' : ''),
     },
     // spousePreferenceInfoFormData.specialCategory (String[])
@@ -297,6 +341,7 @@ export const relationFieldMap: RelationMap = {
       relation: 'spousePreferenceInfoFormData',
       field: 'blackSkinInterest',
       isArray: false,
+      useIs: true,
       transform: (val: string) =>
         val === 'blackSkinInterest' ? 'interested' : '',
     },
@@ -304,6 +349,7 @@ export const relationFieldMap: RelationMap = {
       relation: 'spousePreferenceInfoFormData',
       field: 'specialCategory',
       isArray: true,
+      useIs: true,
       transform: (val: string) => {
         const known = [
           'expatriate',
@@ -336,23 +382,27 @@ export const rangeConfigs: RangeConfig[] = [
     maxKey: 'ageMax',
     relation: 'generalInfoFormData',
     field: 'dateOfBirth',
+    useIs: true,
   },
   {
     minKey: 'heightMin',
     maxKey: 'heightMax',
     relation: 'generalInfoFormData',
     field: 'height',
+    useIs: true,
   },
   {
     minKey: 'partnerAgeMin',
     maxKey: 'partnerAgeMax',
     relation: 'spousePreferenceInfoFormData',
     field: 'partnerAge',
+    useIs: true,
   },
   {
     minKey: 'partnerHeightMin',
     maxKey: 'partnerHeightMax',
     relation: 'spousePreferenceInfoFormData',
     field: 'partnerHeight',
+    useIs: true,
   },
 ];

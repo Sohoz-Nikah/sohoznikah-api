@@ -115,4 +115,5 @@ export interface RangeConfig {
   maxKey: string;
   relation: string;
   field: string;
+  useIs?: boolean;
 }
