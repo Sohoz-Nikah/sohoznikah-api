@@ -5,6 +5,7 @@ interface RangeConfig {
   maxKey: string;
   relation: string;
   field: string;
+  useIs?: boolean;
 }
 
 export function buildRangeConditions(
@@ -12,7 +13,7 @@ export function buildRangeConditions(
   rangeConfigs: RangeConfig[],
 ): Record<string, any>[] {
   return rangeConfigs.flatMap(
-    ({ minKey, maxKey, relation, field }): Record<string, any>[] => {
+    ({ minKey, maxKey, relation, field, useIs }): Record<string, any>[] => {
       const rawMin = filters[minKey];
       const rawMax = filters[maxKey];
 
@@ -30,14 +31,14 @@ export function buildRangeConditions(
 
         const dobCondition: Record<string, any> = {};
         if (isLteValid)
-          dobCondition.gte = format(subYears(today, lte), 'yyyy-MM-dd'); // Older person
+          dobCondition.gte = format(subYears(today, lte), 'yyyy-MM-dd');
         if (isGteValid)
-          dobCondition.lte = format(subYears(today, gte), 'yyyy-MM-dd'); // Younger person
+          dobCondition.lte = format(subYears(today, gte), 'yyyy-MM-dd');
 
         return [
           {
             [relation]: {
-              some: {
+              [useIs ? 'is' : 'some']: {
                 dateOfBirth: dobCondition,
               },
             },
@@ -61,7 +62,7 @@ export function buildRangeConditions(
       return [
         {
           [relation]: {
-            some: {
+            [useIs ? 'is' : 'some']: {
               AND: conditions,
             },
           },

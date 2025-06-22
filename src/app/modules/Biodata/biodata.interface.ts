@@ -17,10 +17,8 @@ export type IBiodataFilterRequest = {
   madhhab?: string | undefined;
   bloodGroup?: string | undefined;
   specialCategory?: string | undefined;
-  partnerBiodataType?: string | undefined;
-  partnerMaritalStatus?: string | undefined;
-  partnerAgeMin?: number | undefined;
-  partnerAgeMax?: number | undefined;
+  myBiodataType?: string | undefined;
+  mySpecialCategory?: string | undefined;
 };
 
 // Types for form data
@@ -117,4 +115,5 @@ export interface RangeConfig {
   maxKey: string;
   relation: string;
   field: string;
+  useIs?: boolean;
 }

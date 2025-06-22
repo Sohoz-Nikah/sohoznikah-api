@@ -225,18 +225,33 @@ async function handleRelatedRecords(
 
   // Handle Primary Info (Single Record) 10%
   if (primaryInfoFormData) {
-    let generatedId;
-    if (primaryInfoFormData.biodataType === BioDataType.GROOM) {
-      generatedId = await generateUniqueCode({
-        prefix: 'M',
-        model: 'biodata',
-        biodataType: BioDataType.GROOM,
-      });
-    } else if (primaryInfoFormData.biodataType === BioDataType.BRIDE) {
-      generatedId = await generateUniqueCode({
-        prefix: 'F',
-        model: 'biodata',
-        biodataType: BioDataType.BRIDE,
+    let existingBiodata = await tx.biodata.findUnique({
+      where: { id: biodataId },
+    });
+    if (
+      existingBiodata?.biodataType !== primaryInfoFormData.biodataType ||
+      !existingBiodata.code
+    ) {
+      let generatedId;
+      if (primaryInfoFormData.biodataType === BioDataType.GROOM) {
+        generatedId = await generateUniqueCode({
+          prefix: 'M',
+          model: 'biodata',
+          biodataType: BioDataType.GROOM,
+        });
+      } else if (primaryInfoFormData.biodataType === BioDataType.BRIDE) {
+        generatedId = await generateUniqueCode({
+          prefix: 'F',
+          model: 'biodata',
+          biodataType: BioDataType.BRIDE,
+        });
+      }
+      await tx.biodata.update({
+        where: { id: biodataId },
+        data: {
+          biodataType: primaryInfoFormData.biodataType,
+          code: generatedId,
+        },
       });
     }
 
@@ -293,14 +308,6 @@ async function handleRelatedRecords(
         },
       });
     }
-
-    await tx.biodata.update({
-      where: { id: biodataId },
-      data: {
-        biodataType: primaryInfoFormData.biodataType,
-        code: generatedId,
-      },
-    });
   }
 
   // Handle General Info (Single Record) 10%
@@ -401,7 +408,7 @@ async function handleRelatedRecords(
     await tx.biodataEducationInfo.upsert({
       where: { biodataId },
       update: {
-        type,
+        type: type as any,
         highestDegree,
         religiousEducation,
         detail,
@@ -410,7 +417,7 @@ async function handleRelatedRecords(
       },
       create: {
         biodataId,
-        type,
+        type: type as any,
         highestDegree,
         religiousEducation,
         detail,
@@ -793,6 +800,7 @@ async function handleRelatedRecords(
       religiousType,
       occupation,
       familyBackground,
+      blackSkinInterest,
       secondMarrige,
       location,
       qualities,
@@ -811,6 +819,7 @@ async function handleRelatedRecords(
         religiousType,
         occupation,
         familyBackground,
+        blackSkinInterest,
         secondMarrige,
         location,
         qualities,
@@ -830,6 +839,7 @@ async function handleRelatedRecords(
         religiousType,
         occupation,
         familyBackground,
+        blackSkinInterest,
         secondMarrige,
         location,
         qualities,
@@ -895,30 +905,40 @@ const getFilteredBiodata = async (
     });
   }
 
-  // 4) root‐level scalar:
-  // if (currentState) {
-  //   and.push({ currentState: { equals: currentState } });
-  // }
-
-  // 5) numeric ranges:
+  // 4) numeric ranges:
   const rangeClauses = buildRangeConditions(filters, rangeConfigs);
   // console.log('rangeClauses', rangeClauses);
   and.push(...rangeClauses);
 
-  // 6) the rest of your filters:
+  // 5) the rest of your filters:
   const filterConditions = buildFilterConditions(
     restFilters,
-    relationFieldMap as RelationMap,
+    relationFieldMap as unknown as RelationMap,
   );
   if (Object.keys(filterConditions).length) {
     and.push(filterConditions);
   }
 
-  // 7) final where:
+  // 6) final where:
   const where: Prisma.BiodataWhereInput = and.length ? { AND: and } : {};
+  console.log('Final Where', JSON.stringify(where, null, 2));
+  // const maritalData = await prisma.biodataMarriageInfo.findMany({
+  //   select: {
+  //     continueStudy: true,
+  //     careerPlan: true,
+  //   },
+  // });
+  // console.log('Marital data sample:', maritalData);
+
+  // const spousePrefs = await prisma.biodataSpousePreferenceInfo.findMany({
+  //   select: {
+  //     specialCategory: true,
+  //   },
+  // });
+  // console.log('Spouse preference data sample:', spousePrefs);
 
   // 8) query + count:
-  const [rows, total] = await Promise.all([
+  const [rows, filteredRows] = await Promise.all([
     prisma.biodata.findMany({
       where,
       skip,
@@ -939,26 +959,37 @@ const getFilteredBiodata = async (
           ? { [options.sortBy]: options.sortOrder }
           : { id: 'desc' },
     }),
-    prisma.biodata.count({ where }),
+    prisma.biodata.findMany({
+      where,
+      select: { id: true }, // Select only the id to minimize data transfer
+    }),
   ]);
+
+  const total = filteredRows.length;
 
   // 9) map to DTO:
   const data = rows.map(b => ({
     id: b.id,
     code: b.code,
-    biodataType: b.primaryInfoFormData?.[0]?.biodataType,
-    fullName: b.primaryInfoFormData?.[0]?.fullName,
-    birthYear: b.generalInfoFormData?.[0]?.dateOfBirth,
-    maritalStatus: b.generalInfoFormData?.[0]?.maritalStatus,
-    height: b.generalInfoFormData?.[0]?.height,
-    permanentAddress: b.addressInfoFormData?.[0]?.location,
-    occupation: b.occupationInfoFormData?.[0]?.occupations,
+    biodataType: b.primaryInfoFormData?.biodataType ?? null,
+    fullName: b.primaryInfoFormData?.fullName ?? null,
+    birthYear: b.generalInfoFormData?.dateOfBirth ?? null,
+    maritalStatus: b.generalInfoFormData?.maritalStatus ?? null,
+    height: b.generalInfoFormData?.height ?? null,
+    permanentAddress:
+      b.addressInfoFormData.find(a => a.type === 'permanent_address')
+        ?.location === 'bangladesh'
+        ? b.addressInfoFormData.find(a => a.type === 'permanent_address')
+            ?.state +
+          ', ' +
+          b.addressInfoFormData.find(a => a.type === 'permanent_address')?.city
+        : b.addressInfoFormData.find(a => a.type === 'permanent_address')
+            ?.location,
+    occupation: b.occupationInfoFormData?.occupations,
     profilePic: b.profilePic,
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
   }));
-
-  // console.log('data', data);
 
   return {
     meta: { page, limit, total },

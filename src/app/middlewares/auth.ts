@@ -53,7 +53,7 @@ const auth = (requiredRoles: string[] = []) => {
       });
 
       if (!user) {
-        throw new ApiError(httpStatus.NOT_FOUND, 'User does not exist');
+        throw new ApiError(httpStatus.UNAUTHORIZED, 'User does not exist!');
       }
       if (user.isDeleted) {
         throw new ApiError(httpStatus.FORBIDDEN, 'User is deleted!');
