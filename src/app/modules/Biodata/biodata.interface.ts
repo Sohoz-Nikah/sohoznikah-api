@@ -1,6 +1,7 @@
-import { BioDataType } from '@prisma/client';
+import { BiodataStatus, BioDataType } from '@prisma/client';
 
 export type IBiodataFilterRequest = {
+  status?: BiodataStatus | undefined;
   searchTerm?: string | undefined;
   biodataType?: string | undefined;
   ageMin?: number | undefined;

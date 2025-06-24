@@ -35,21 +35,22 @@ const getFilteredBiodata = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllBiodata = catchAsync(async (req: Request, res: Response) => {
-  const result = await BiodataServices.getAllBiodata();
+  const filters = pick(req.query, BiodataFilterableFields);
+  const options = pick(req.query, ['limit', 'page', 'sortBy', 'sortOrder']);
+  const result = await BiodataServices.getAllBiodata(filters, options);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: 'Biodata retrieved successfully',
-    data: result,
+    meta: result.meta,
+    data: result.data,
   });
 });
 
 const getABiodata = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
-  console.log('id', id);
   const result = await BiodataServices.getABiodata(id);
-  console.log('result', result);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,

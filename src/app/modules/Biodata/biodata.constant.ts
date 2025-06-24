@@ -5,6 +5,7 @@ import { RangeConfig } from './biodata.interface';
 export const BiodataSearchAbleFields: string[] = ['code'];
 
 export const BiodataFilterableFields: string[] = [
+  'status',
   'searchTerm',
   'biodataType',
   'maritalStatus',

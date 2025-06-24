@@ -41,6 +41,20 @@ const createAFavourite = async (
     },
   });
 
+  const existingShortlist = await prisma.shortlistBiodata.findFirst({
+    where: {
+      biodataId,
+      userId,
+    },
+  });
+
+  if (existingShortlist) {
+    await prisma.shortlistBiodata.delete({
+      where: {
+        id: existingShortlist.id,
+      },
+    });
+  }
   if (existingFavourite) {
     await prisma.favouriteBiodata.delete({
       where: {

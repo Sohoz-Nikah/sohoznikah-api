@@ -1,5 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Prisma, User, UserRole, VisibilityStatus } from '@prisma/client';
+import {
+  Prisma,
+  TokenStatus,
+  TokenType,
+  User,
+  UserRole,
+  VisibilityStatus,
+} from '@prisma/client';
 import httpStatus from 'http-status';
 import { JwtPayload } from 'jsonwebtoken';
 import config from '../../config';
@@ -261,14 +268,18 @@ const giveToken = async (userId: string, payload: { token: number }) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
 
-  const result = await prisma.user.update({
-    where: {
-      id: userId,
-    },
+  const result = await prisma.token.create({
     data: {
-      token: { increment: token },
+      tokenType: TokenType.CUSTOM,
+      quantity: payload.token,
+      totalPrice: 0,
+      transactionId: '',
+      phoneNumber: '',
+      tokenStatus: TokenStatus.APPROVED,
+      userId,
     },
   });
+
   await prisma.notification.create({
     data: {
       type: 'TOKEN_GIVEN',

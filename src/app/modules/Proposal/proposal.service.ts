@@ -283,29 +283,53 @@ const getProposalByBiodataId = async (
   if (viewedBiodata.userId === userId) {
     return { proposal: null, direction: null };
   }
-  const proposal = await prisma.proposal.findFirst({
+
+  const sentProposal = await prisma.proposal.findFirst({
     where: {
       OR: [
         {
           senderId: userId,
           receiverId: viewedBiodata.userId,
         },
+      ],
+    },
+    select: {
+      id: true,
+      status: true,
+      respondedAt: true,
+      createdAt: true,
+      expiredAt: true,
+      isCancelled: true,
+      tokenSpent: true,
+      tokenRefunded: true,
+    },
+  });
+
+  const receivedProposal = await prisma.proposal.findFirst({
+    where: {
+      OR: [
         {
           senderId: viewedBiodata.userId,
           receiverId: userId,
         },
       ],
     },
+    select: {
+      id: true,
+      status: true,
+      respondedAt: true,
+      createdAt: true,
+      expiredAt: true,
+      isCancelled: true,
+      tokenSpent: true,
+      tokenRefunded: true,
+    },
   });
 
-  if (!proposal) {
-    throw new ApiError(
-      httpStatus.NOT_FOUND,
-      'You donot get any proposal from this biodata',
-    );
-  }
-
-  return proposal;
+  return {
+    sentProposal: sentProposal || null,
+    receivedProposal: receivedProposal || null,
+  };
 };
 
 const cancelProposal = async (proposalId: string, user: JwtPayload) => {
