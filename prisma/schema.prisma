@@ -319,7 +319,7 @@ model BiodataPersonalInfo {
 }
 
 model BiodataMarriageInfo {
-  id                                Int      @id @default(autoincrement())
+  id                                String    @id @default(uuid())
   biodataId                         String   @unique
   reasonForRemarriage               String?
   currentSpouseAndChildren          String?
