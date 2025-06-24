@@ -52,6 +52,8 @@ router.post(
   BiodataControllers.deleteABiodataRequest,
 );
 
+router.post('/:id/seen', auth([UserRole.USER]), BiodataControllers.markAsSeen);
+
 router.get('/:id', BiodataControllers.getABiodata);
 
 router.get(

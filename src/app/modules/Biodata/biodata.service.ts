@@ -877,7 +877,9 @@ const createABiodata = async (
 const getFilteredBiodata = async (
   filters: IBiodataFilterRequest,
   options: IPaginationOptions,
+  currentUserId: string | null,
 ) => {
+  // console.log('currentUserId', currentUserId);
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
 
   // 1) extract special keys:
@@ -938,7 +940,12 @@ const getFilteredBiodata = async (
         familyInfoFormData: true,
         religiousInfoFormData: true,
         personalInfoFormData: true,
-        favouriteBiodata: true,
+        ...(currentUserId
+          ? {
+              favouriteBiodata: { where: { userId: currentUserId } },
+              SeenBiodata: { where: { userId: currentUserId } },
+            }
+          : {}),
       },
       orderBy:
         options.sortBy && options.sortOrder
@@ -972,10 +979,14 @@ const getFilteredBiodata = async (
         : b.addressInfoFormData.find(a => a.type === 'permanent_address')
             ?.location,
     occupation: b.occupationInfoFormData?.occupations,
+    isSeen: Boolean(currentUserId && b.SeenBiodata?.length),
+    isFavourite: Boolean(currentUserId && b.favouriteBiodata?.length),
     profilePic: b.profilePic,
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
   }));
+
+  // console.log('data', data);
 
   return {
     meta: { page, limit, total },
@@ -989,7 +1000,6 @@ const getAllBiodata = async (
 ) => {
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
   const { searchTerm, status } = filters;
-  console.log('filters', filters);
   const and: Prisma.BiodataWhereInput[] = [];
 
   if (searchTerm) {
@@ -1016,12 +1026,24 @@ const getAllBiodata = async (
       options.sortBy && options.sortOrder
         ? { [options.sortBy]: options.sortOrder }
         : { updatedAt: 'desc' },
+    include: {
+      user: true,
+    },
   });
   const total = await prisma.biodata.count({ where });
 
+  const finalData = biodata.map(b => ({
+    ...b,
+    user: {
+      bioDeleteReason: b?.user?.bioDeleteReason || null,
+      bkashNumber: b?.user?.bkashNumber || null,
+      spouseBiodata: b?.user?.spouseBiodata || null,
+    },
+  }));
+
   return {
     meta: { page, limit, total },
-    data: biodata,
+    data: finalData,
   };
 };
 
@@ -1164,6 +1186,14 @@ const getBiodataByAdmin = async (biodataId: string) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'Biodata not found');
   }
   return biodata;
+};
+
+const markAsSeen = async (userId: string, biodataId: string) => {
+  await prisma.seenBiodata.upsert({
+    where: { userId_biodataId: { userId, biodataId } },
+    update: { seenAt: new Date() },
+    create: { userId, biodataId },
+  });
 };
 
 const updateBiodataByAdmin = async (
@@ -1366,6 +1396,7 @@ export const BiodataServices = {
   getABiodata,
   getMyBiodata,
   getAllBiodata,
+  markAsSeen,
   updateMyBiodata,
   getBiodataByAdmin,
   updateBiodataByAdmin,

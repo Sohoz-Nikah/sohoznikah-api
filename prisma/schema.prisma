@@ -74,11 +74,25 @@ model User {
   sentProposals               Proposal[]                          @relation("SentProposals")
   shortlistBiodata            ShortlistBiodata[]
   Token                       Token[]
+  SeenBiodata                 SeenBiodata[]
 
   @@index([email])
   @@index([phoneNumber])
   @@index([role])
   @@index([status])
+}
+
+model SeenBiodata {
+  id        String   @id @default(uuid())
+  userId    String
+  biodataId String
+  seenAt    DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  biodata Biodata @relation(fields: [biodataId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, biodataId])
+  @@index([biodataId])
 }
 
 /// *
@@ -128,6 +142,7 @@ model Biodata {
   Notification                        Notification[]
   proposal                            Proposal[]
   shortlistBiodata                    ShortlistBiodata[]
+  SeenBiodata                         SeenBiodata[]
 }
 
 model BiodataPrimaryInfo {
@@ -319,7 +334,7 @@ model BiodataPersonalInfo {
 }
 
 model BiodataMarriageInfo {
-  id                                String    @id @default(uuid())
+  id                                String   @id @default(uuid())
   biodataId                         String   @unique
   reasonForRemarriage               String?
   currentSpouseAndChildren          String?
