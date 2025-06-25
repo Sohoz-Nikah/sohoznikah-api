@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Prisma, Proposal, UserRole } from '@prisma/client';
+import { Prisma, Proposal, ProposalStatus, UserRole } from '@prisma/client';
 import { addHours } from 'date-fns';
 import httpStatus from 'http-status';
 import { JwtPayload } from 'jsonwebtoken';
@@ -361,12 +361,17 @@ const cancelProposal = async (proposalId: string, user: JwtPayload) => {
       message: `আপনি রেসপন্স না করায় অপরপক্ষ প্রস্তাবটি বাতিল করেছেন।`,
       userId: proposal.receiverId,
       proposalId: proposalId,
+      biodataId: proposal.biodataId,
     },
   });
 
   return prisma.proposal.update({
     where: { id: proposalId, senderId: userId },
-    data: { isCancelled: true },
+    data: {
+      isCancelled: true,
+      status: ProposalStatus.TOKEN_WITHDRAWN,
+      tokenRefunded: true,
+    },
   });
 };
 

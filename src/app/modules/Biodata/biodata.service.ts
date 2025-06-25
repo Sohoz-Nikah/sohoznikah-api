@@ -33,7 +33,7 @@ async function handleBiodataOperation(
   userId: string,
   isAdmin: boolean = false,
 ): Promise<Biodata> {
-  console.log('formData', formData);
+  // console.log('formData', formData);
   return await prisma.$transaction(async tx => {
     let biodata: Biodata;
 

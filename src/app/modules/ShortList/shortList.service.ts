@@ -242,7 +242,7 @@ const deleteAShortlist = async (ShortlistId: string, user: JwtPayload) => {
       },
     });
 
-    console.log(favourite, 'favourite');
+    // console.log(favourite, 'favourite');
     if (favourite) {
       await prisma.favouriteBiodata.update({
         where: {

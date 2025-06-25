@@ -280,6 +280,15 @@ const giveToken = async (userId: string, payload: { token: number }) => {
     },
   });
 
+  await prisma.user.update({
+    where: {
+      id: userId,
+    },
+    data: {
+      token: { increment: token },
+    },
+  });
+
   await prisma.notification.create({
     data: {
       type: 'TOKEN_GIVEN',
