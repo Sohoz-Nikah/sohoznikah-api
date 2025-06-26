@@ -33,6 +33,7 @@ async function handleBiodataOperation(
   userId: string,
   isAdmin: boolean = false,
 ): Promise<Biodata> {
+  // console.log('formData', formData);
   return await prisma.$transaction(async tx => {
     let biodata: Biodata;
 
@@ -876,7 +877,9 @@ const createABiodata = async (
 const getFilteredBiodata = async (
   filters: IBiodataFilterRequest,
   options: IPaginationOptions,
+  currentUserId: string | null,
 ) => {
+  // console.log('currentUserId', currentUserId);
   const { limit, page, skip } = paginationHelpers.calculatePagination(options);
 
   // 1) extract special keys:
@@ -921,21 +924,6 @@ const getFilteredBiodata = async (
 
   // 6) final where:
   const where: Prisma.BiodataWhereInput = and.length ? { AND: and } : {};
-  console.log('Final Where', JSON.stringify(where, null, 2));
-  // const maritalData = await prisma.biodataMarriageInfo.findMany({
-  //   select: {
-  //     continueStudy: true,
-  //     careerPlan: true,
-  //   },
-  // });
-  // console.log('Marital data sample:', maritalData);
-
-  // const spousePrefs = await prisma.biodataSpousePreferenceInfo.findMany({
-  //   select: {
-  //     specialCategory: true,
-  //   },
-  // });
-  // console.log('Spouse preference data sample:', spousePrefs);
 
   // 8) query + count:
   const [rows, filteredRows] = await Promise.all([
@@ -952,7 +940,12 @@ const getFilteredBiodata = async (
         familyInfoFormData: true,
         religiousInfoFormData: true,
         personalInfoFormData: true,
-        favouriteBiodata: true,
+        ...(currentUserId
+          ? {
+              favouriteBiodata: { where: { userId: currentUserId } },
+              SeenBiodata: { where: { userId: currentUserId } },
+            }
+          : {}),
       },
       orderBy:
         options.sortBy && options.sortOrder
@@ -986,10 +979,14 @@ const getFilteredBiodata = async (
         : b.addressInfoFormData.find(a => a.type === 'permanent_address')
             ?.location,
     occupation: b.occupationInfoFormData?.occupations,
+    isSeen: Boolean(currentUserId && b.SeenBiodata?.length),
+    isFavourite: Boolean(currentUserId && b.favouriteBiodata?.length),
     profilePic: b.profilePic,
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
   }));
+
+  // console.log('data', data);
 
   return {
     meta: { page, limit, total },
@@ -997,9 +994,57 @@ const getFilteredBiodata = async (
   };
 };
 
-const getAllBiodata = async () => {
-  const biodata = await prisma.biodata.findMany();
-  return biodata;
+const getAllBiodata = async (
+  filters: IBiodataFilterRequest,
+  options: IPaginationOptions,
+) => {
+  const { limit, page, skip } = paginationHelpers.calculatePagination(options);
+  const { searchTerm, status } = filters;
+  const and: Prisma.BiodataWhereInput[] = [];
+
+  if (searchTerm) {
+    and.push({
+      OR: BiodataSearchAbleFields.map(f => ({
+        [f]: { contains: searchTerm, mode: 'insensitive' },
+      })),
+    });
+  }
+
+  if (status) {
+    and.push({
+      status: { equals: status },
+    });
+  }
+
+  const where: Prisma.BiodataWhereInput = and.length ? { AND: and } : {};
+
+  const biodata = await prisma.biodata.findMany({
+    where,
+    skip,
+    take: limit,
+    orderBy:
+      options.sortBy && options.sortOrder
+        ? { [options.sortBy]: options.sortOrder }
+        : { updatedAt: 'desc' },
+    include: {
+      user: true,
+    },
+  });
+  const total = await prisma.biodata.count({ where });
+
+  const finalData = biodata.map(b => ({
+    ...b,
+    user: {
+      bioDeleteReason: b?.user?.bioDeleteReason || null,
+      bkashNumber: b?.user?.bkashNumber || null,
+      spouseBiodata: b?.user?.spouseBiodata || null,
+    },
+  }));
+
+  return {
+    meta: { page, limit, total },
+    data: finalData,
+  };
 };
 
 const getABiodata = async (biodataId: string) => {
@@ -1065,7 +1110,7 @@ const getMyBiodata = async (userId: string) => {
   return {
     ...biodata,
     biodataCompleted:
-      biodata?.biodataCompleted && biodata?.biodataCompleted > 100
+      biodata?.biodataCompleted && biodata?.biodataCompleted >= 100
         ? 100
         : biodata?.biodataCompleted,
     token: user?.token,
@@ -1141,6 +1186,14 @@ const getBiodataByAdmin = async (biodataId: string) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'Biodata not found');
   }
   return biodata;
+};
+
+const markAsSeen = async (userId: string, biodataId: string) => {
+  await prisma.seenBiodata.upsert({
+    where: { userId_biodataId: { userId, biodataId } },
+    update: { seenAt: new Date() },
+    create: { userId, biodataId },
+  });
 };
 
 const updateBiodataByAdmin = async (
@@ -1343,6 +1396,7 @@ export const BiodataServices = {
   getABiodata,
   getMyBiodata,
   getAllBiodata,
+  markAsSeen,
   updateMyBiodata,
   getBiodataByAdmin,
   updateBiodataByAdmin,

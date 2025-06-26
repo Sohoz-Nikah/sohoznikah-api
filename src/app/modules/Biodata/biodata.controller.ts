@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import httpStatus from 'http-status';
-import { JwtPayload } from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
+import config from '../../config';
 import catchAsync from '../../shared/catchAsync';
 import pick from '../../shared/pick';
 import sendResponse from '../../shared/sendResponse';
@@ -21,9 +22,27 @@ const createABiodata = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getFilteredBiodata = catchAsync(async (req: Request, res: Response) => {
+  let currentUserId: string | null = null;
+  const authHeader = req.headers.authorization;
+  if (authHeader) {
+    try {
+      const decoded = jwt.verify(
+        authHeader,
+        config.jwt.access_secret!,
+      ) as JwtPayload;
+      currentUserId = decoded.userId;
+    } catch {
+      currentUserId = null;
+    }
+  }
+
   const filters = pick(req.query, BiodataFilterableFields);
   const options = pick(req.query, ['limit', 'page', 'sortBy', 'sortOrder']);
-  const result = await BiodataServices.getFilteredBiodata(filters, options);
+  const result = await BiodataServices.getFilteredBiodata(
+    filters,
+    options,
+    currentUserId,
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -35,21 +54,22 @@ const getFilteredBiodata = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllBiodata = catchAsync(async (req: Request, res: Response) => {
-  const result = await BiodataServices.getAllBiodata();
+  const filters = pick(req.query, BiodataFilterableFields);
+  const options = pick(req.query, ['limit', 'page', 'sortBy', 'sortOrder']);
+  const result = await BiodataServices.getAllBiodata(filters, options);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: 'Biodata retrieved successfully',
-    data: result,
+    meta: result.meta,
+    data: result.data,
   });
 });
 
 const getABiodata = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
-  console.log('id', id);
   const result = await BiodataServices.getABiodata(id);
-  console.log('result', result);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -67,6 +87,18 @@ const getMyBiodata = catchAsync(async (req: Request, res: Response) => {
     success: true,
     message: 'Biodata retrieved successfully',
     data: result,
+  });
+});
+
+const markAsSeen = catchAsync(async (req: Request, res: Response) => {
+  const { id: biodataId } = req.params;
+  const { userId } = req.user as JwtPayload;
+  await BiodataServices.markAsSeen(userId, biodataId);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Marked as seen',
+    data: null,
   });
 });
 
@@ -183,6 +215,7 @@ export const BiodataControllers = {
   getAllBiodata,
   getABiodata,
   getMyBiodata,
+  markAsSeen,
   updateMyBiodata,
   updateBiodataByAdmin,
   getBiodataByAdmin,

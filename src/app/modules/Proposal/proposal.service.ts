@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Prisma, Proposal, UserRole } from '@prisma/client';
+import { Prisma, Proposal, ProposalStatus, UserRole } from '@prisma/client';
 import { addHours } from 'date-fns';
 import httpStatus from 'http-status';
 import { JwtPayload } from 'jsonwebtoken';
@@ -283,29 +283,53 @@ const getProposalByBiodataId = async (
   if (viewedBiodata.userId === userId) {
     return { proposal: null, direction: null };
   }
-  const proposal = await prisma.proposal.findFirst({
+
+  const sentProposal = await prisma.proposal.findFirst({
     where: {
       OR: [
         {
           senderId: userId,
           receiverId: viewedBiodata.userId,
         },
+      ],
+    },
+    select: {
+      id: true,
+      status: true,
+      respondedAt: true,
+      createdAt: true,
+      expiredAt: true,
+      isCancelled: true,
+      tokenSpent: true,
+      tokenRefunded: true,
+    },
+  });
+
+  const receivedProposal = await prisma.proposal.findFirst({
+    where: {
+      OR: [
         {
           senderId: viewedBiodata.userId,
           receiverId: userId,
         },
       ],
     },
+    select: {
+      id: true,
+      status: true,
+      respondedAt: true,
+      createdAt: true,
+      expiredAt: true,
+      isCancelled: true,
+      tokenSpent: true,
+      tokenRefunded: true,
+    },
   });
 
-  if (!proposal) {
-    throw new ApiError(
-      httpStatus.NOT_FOUND,
-      'You donot get any proposal from this biodata',
-    );
-  }
-
-  return proposal;
+  return {
+    sentProposal: sentProposal || null,
+    receivedProposal: receivedProposal || null,
+  };
 };
 
 const cancelProposal = async (proposalId: string, user: JwtPayload) => {
@@ -337,12 +361,17 @@ const cancelProposal = async (proposalId: string, user: JwtPayload) => {
       message: `আপনি রেসপন্স না করায় অপরপক্ষ প্রস্তাবটি বাতিল করেছেন।`,
       userId: proposal.receiverId,
       proposalId: proposalId,
+      biodataId: proposal.biodataId,
     },
   });
 
   return prisma.proposal.update({
     where: { id: proposalId, senderId: userId },
-    data: { isCancelled: true },
+    data: {
+      isCancelled: true,
+      status: ProposalStatus.TOKEN_WITHDRAWN,
+      tokenRefunded: true,
+    },
   });
 };
 

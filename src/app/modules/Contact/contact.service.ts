@@ -157,9 +157,15 @@ const getFilteredContact = async (
   // Role-based access filtering
   if (role === UserRole.USER) {
     if (type === 'sent') {
-      andConditions.push({ senderId: userId });
+      andConditions.push({
+        senderId: userId,
+        contactStatus: { in: [ContactStatus.ACCEPTED] },
+      });
     } else if (type === 'received') {
-      andConditions.push({ receiverId: userId });
+      andConditions.push({
+        receiverId: userId,
+        contactStatus: { in: [ContactStatus.ACCEPTED] },
+      });
     } else {
       // Default: return both sent and received
       andConditions.push({
@@ -193,6 +199,7 @@ const getFilteredContact = async (
         include: {
           biodatas: {
             include: {
+              primaryInfoFormData: true,
               addressInfoFormData: true,
               guardianContacts: true,
             },
@@ -203,6 +210,7 @@ const getFilteredContact = async (
         include: {
           biodatas: {
             include: {
+              primaryInfoFormData: true,
               addressInfoFormData: true,
               guardianContacts: true,
             },
@@ -263,6 +271,7 @@ const getFilteredContact = async (
       bioPresentState: currentAddress?.state,
       bioPermanentCity: permanentAddresses?.city,
       bioPermanentState: permanentAddresses?.state,
+      fullName: biodata?.primaryInfoFormData?.fullName,
       createdAt: Contact?.createdAt,
       respondedAt: Contact?.respondedAt,
       isDeleted: Contact?.isDeleted,
@@ -312,7 +321,7 @@ const getMyContact = async (user: JwtPayload) => {
   const { userId } = user;
 
   const result = await prisma.contactAccess.findMany({
-    where: { receiverId: userId, contactStatus: ContactStatus.PENDING },
+    where: { receiverId: userId },
   });
   return result;
 };
@@ -359,8 +368,8 @@ const updateContactResponse = async (
   await prisma.notification.create({
     data: {
       type: `${payload.response === 'YES' ? 'CONTACT_ACCEPTED' : 'CONTACT_REJECTED'}`,
-      message: `${payload.response === 'YES' ? 'অপরপক্ষ যোগাযোগের অনুরোধ গ্রহণ করেছেন। যোগাযোগ নম্বর দেখুন। ' : 'অপরপক্ষ যোগাযোগের অনুরোধ প্রত্যাখ্যান করেছেন। '}`,
-      userId: Contact.receiverId,
+      message: `${payload.response === 'YES' ? 'অপরপক্ষ যোগাযোগের অনুরোধ গ্রহণ করেছেন। যোগাযোগ নম্বর দেখুন। ' : 'অপরপক্ষ যোগাযোগের অনুরোধ প্রত্যাখ্যান করেছেন এবং আপনি ২টি টোকেন রিফান্ড পেয়েছেন। '}`,
+      userId: Contact.senderId,
       contactAccessId: ContactId,
     },
   });
@@ -432,14 +441,20 @@ const checkAndCancelExpiredRequests = async () => {
 
     // Process each expired request
     const updatePromises = expiredRequests.map(async request => {
-      // Update status to REJECTED and mark tokens as refunded
-      await prisma.contactAccess.update({
-        where: { id: request.id },
+      // Create a notification for the sender
+      await prisma.notification.create({
         data: {
-          contactStatus: 'REJECTED',
-          tokenRefunded: true,
-          tokenSpent: 0,
+          type: 'CONTACT_AUTO_CANCELLED',
+          message: `৭২ ঘন্টা অতিক্রম হওয়ায় যোগাযোগের অনুরোধটি বাতিল হয়েছে এবং ২টি টোকেন রিফান্ড পেয়েছেন।
+। চাইলে আবার অনুরোধ পাঠাতে পারেন।`,
+          userId: request.senderId,
+          contactAccessId: request.id,
         },
+      });
+
+      // Update status to REJECTED and mark tokens as refunded
+      await prisma.contactAccess.delete({
+        where: { id: request.id },
       });
 
       // Refund 2 tokens to the sender
@@ -449,16 +464,6 @@ const checkAndCancelExpiredRequests = async () => {
           token: {
             increment: 2,
           },
-        },
-      });
-
-      // Create a notification for the sender
-      await prisma.notification.create({
-        data: {
-          type: 'CONTACT_AUTO_CANCELLED',
-          message: `৭২ ঘন্টা অতিক্রম হওয়ায় যোগাযোগের অনুরোধটি বাতিল হয়েছে। চাইলে আবার অনুরোধ পাঠাতে পারেন। যোগাযোগ নম্বর দেখুন।`,
-          userId: request.senderId,
-          contactAccessId: request.id,
         },
       });
     });
