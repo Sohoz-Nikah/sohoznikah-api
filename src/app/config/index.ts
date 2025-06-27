@@ -26,9 +26,12 @@ export default {
     phoneNumber: process.env.SUPER_ADMIN_PHONE,
   },
 
-  send_email: {
-    email: process.env.EMAIL,
-    app_pass: process.env.APP_PASS,
+  email: {
+    host: process.env.EMAIL_HOST,
+    port: process.env.EMAIL_PORT,
+    secure: process.env.EMAIL_SECURE,
+    from: process.env.EMAIL_FROM,
+    password: process.env.EMAIL_PASSWORD,
   },
   frontend_url: process.env.FRONTEND_URL,
 };
