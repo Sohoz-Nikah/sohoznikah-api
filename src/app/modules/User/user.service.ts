@@ -325,18 +325,21 @@ const deleteUser = async (id: string, userId: string) => {
       'You are not authorized to delete this user!',
     );
   }
-  if (user.isDeleted) {
-    throw new ApiError(httpStatus.FORBIDDEN, 'This user is already deleted!');
-  }
 
-  const deleteUser = await prisma.user.update({
+  const deleteUser = await prisma.user.delete({
     where: {
       id: id,
     },
-    data: {
-      isDeleted: true,
-    },
   });
+
+  // const deleteUser = await prisma.user.update({
+  //   where: {
+  //     id: id,
+  //   },
+  //   data: {
+  //     isDeleted: true,
+  //   },
+  // });
 
   return deleteUser;
 };

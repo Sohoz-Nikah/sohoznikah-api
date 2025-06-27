@@ -62,7 +62,10 @@ const getFilteredToken = async (
   }
 
   if (role === UserRole.USER) {
-    andConditions.push({ userId: userId });
+    andConditions.push({
+      userId: userId,
+      tokenStatus: TokenStatus.APPROVED,
+    });
   }
 
   // Add additional filters
