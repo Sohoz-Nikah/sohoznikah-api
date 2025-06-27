@@ -51,6 +51,9 @@ const getAllUsers = async (
     email: {
       not: config.super_admin.email,
     },
+    isDeleted: {
+      not: true,
+    },
   });
 
   const whereConditions: Prisma.UserWhereInput = { AND: andConditions };
