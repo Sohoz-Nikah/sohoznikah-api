@@ -64,6 +64,16 @@ CREATE TABLE "User" (
 );
 
 -- CreateTable
+CREATE TABLE "SeenBiodata" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "biodataId" TEXT NOT NULL,
+    "seenAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "SeenBiodata_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Biodata" (
     "id" TEXT NOT NULL,
     "code" TEXT,
@@ -153,7 +163,7 @@ CREATE TABLE "BiodataAddressInfo" (
 CREATE TABLE "BiodataEducationInfo" (
     "id" TEXT NOT NULL,
     "biodataId" TEXT NOT NULL,
-    "type" TEXT NOT NULL,
+    "type" TEXT[],
     "highestDegree" TEXT NOT NULL,
     "religiousEducation" TEXT[],
     "detail" TEXT,
@@ -281,7 +291,7 @@ CREATE TABLE "BiodataPersonalInfo" (
 
 -- CreateTable
 CREATE TABLE "BiodataMarriageInfo" (
-    "id" SERIAL NOT NULL,
+    "id" TEXT NOT NULL,
     "biodataId" TEXT NOT NULL,
     "reasonForRemarriage" TEXT,
     "currentSpouseAndChildren" TEXT,
@@ -319,11 +329,12 @@ CREATE TABLE "BiodataSpousePreferenceInfo" (
     "maritalStatus" TEXT[],
     "specialCategory" TEXT[],
     "religiousType" TEXT[],
-    "occupation" TEXT[],
+    "occupation" TEXT,
     "familyBackground" TEXT[],
     "secondMarrige" TEXT,
     "location" TEXT,
     "qualities" TEXT,
+    "blackSkinInterest" TEXT,
     "createdBy" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedBy" TEXT,
@@ -470,6 +481,12 @@ CREATE INDEX "User_role_idx" ON "User"("role");
 CREATE INDEX "User_status_idx" ON "User"("status");
 
 -- CreateIndex
+CREATE INDEX "SeenBiodata_biodataId_idx" ON "SeenBiodata"("biodataId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "SeenBiodata_userId_biodataId_key" ON "SeenBiodata"("userId", "biodataId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Biodata_code_key" ON "Biodata"("code");
 
 -- CreateIndex
@@ -512,13 +529,19 @@ CREATE UNIQUE INDEX "ShortlistBiodata_userId_biodataId_key" ON "ShortlistBiodata
 CREATE UNIQUE INDEX "ContactAccess_senderId_receiverId_biodataId_key" ON "ContactAccess"("senderId", "receiverId", "biodataId");
 
 -- AddForeignKey
-ALTER TABLE "Biodata" ADD CONSTRAINT "Biodata_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "SeenBiodata" ADD CONSTRAINT "SeenBiodata_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "SeenBiodata" ADD CONSTRAINT "SeenBiodata_biodataId_fkey" FOREIGN KEY ("biodataId") REFERENCES "Biodata"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Biodata" ADD CONSTRAINT "Biodata_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Biodata" ADD CONSTRAINT "Biodata_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Biodata" ADD CONSTRAINT "Biodata_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "BiodataPrimaryInfo" ADD CONSTRAINT "BiodataPrimaryInfo_biodataId_fkey" FOREIGN KEY ("biodataId") REFERENCES "Biodata"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -638,46 +661,46 @@ ALTER TABLE "BiodataPrimaryInfoGuardianContact" ADD CONSTRAINT "BiodataPrimaryIn
 ALTER TABLE "BiodataPrimaryInfoGuardianContact" ADD CONSTRAINT "BiodataPrimaryInfoGuardianContact_updatedBy_fkey" FOREIGN KEY ("updatedBy") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "FavouriteBiodata" ADD CONSTRAINT "FavouriteBiodata_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "FavouriteBiodata" ADD CONSTRAINT "FavouriteBiodata_biodataId_fkey" FOREIGN KEY ("biodataId") REFERENCES "Biodata"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ShortlistBiodata" ADD CONSTRAINT "ShortlistBiodata_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "FavouriteBiodata" ADD CONSTRAINT "FavouriteBiodata_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ShortlistBiodata" ADD CONSTRAINT "ShortlistBiodata_biodataId_fkey" FOREIGN KEY ("biodataId") REFERENCES "Biodata"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Proposal" ADD CONSTRAINT "Proposal_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Proposal" ADD CONSTRAINT "Proposal_receiverId_fkey" FOREIGN KEY ("receiverId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ShortlistBiodata" ADD CONSTRAINT "ShortlistBiodata_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Proposal" ADD CONSTRAINT "Proposal_biodataId_fkey" FOREIGN KEY ("biodataId") REFERENCES "Biodata"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ContactAccess" ADD CONSTRAINT "ContactAccess_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Proposal" ADD CONSTRAINT "Proposal_receiverId_fkey" FOREIGN KEY ("receiverId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ContactAccess" ADD CONSTRAINT "ContactAccess_receiverId_fkey" FOREIGN KEY ("receiverId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Proposal" ADD CONSTRAINT "Proposal_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ContactAccess" ADD CONSTRAINT "ContactAccess_biodataId_fkey" FOREIGN KEY ("biodataId") REFERENCES "Biodata"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Notification" ADD CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ContactAccess" ADD CONSTRAINT "ContactAccess_receiverId_fkey" FOREIGN KEY ("receiverId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ContactAccess" ADD CONSTRAINT "ContactAccess_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Notification" ADD CONSTRAINT "Notification_biodataId_fkey" FOREIGN KEY ("biodataId") REFERENCES "Biodata"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Notification" ADD CONSTRAINT "Notification_contactAccessId_fkey" FOREIGN KEY ("contactAccessId") REFERENCES "ContactAccess"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Notification" ADD CONSTRAINT "Notification_proposalId_fkey" FOREIGN KEY ("proposalId") REFERENCES "Proposal"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Notification" ADD CONSTRAINT "Notification_contactAccessId_fkey" FOREIGN KEY ("contactAccessId") REFERENCES "ContactAccess"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Notification" ADD CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Token" ADD CONSTRAINT "Token_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
