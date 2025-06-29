@@ -116,7 +116,10 @@ const updateMyBiodata = catchAsync(async (req: Request, res: Response) => {
 
 const getBiodataByAdmin = catchAsync(async (req: Request, res: Response) => {
   const { id: biodataId } = req.params;
-  const result = await BiodataServices.getBiodataByAdmin(biodataId);
+  const result = await BiodataServices.getBiodataByAdmin(
+    biodataId,
+    req.user as JwtPayload,
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

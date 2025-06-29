@@ -1163,7 +1163,8 @@ const updateMyBiodata = async (
   return biodataData;
 };
 
-const getBiodataByAdmin = async (biodataId: string) => {
+const getBiodataByAdmin = async (biodataId: string, user: JwtPayload) => {
+  const { role } = user;
   const biodata = await prisma.biodata.findFirst({
     where: { id: biodataId },
     include: {
@@ -1179,7 +1180,7 @@ const getBiodataByAdmin = async (biodataId: string) => {
       personalInfoFormData: true,
       marriageInfoFormData: true,
       spousePreferenceInfoFormData: true,
-      guardianContacts: true,
+      guardianContacts: role === UserRole.USER ? undefined : true,
     },
   });
   if (!biodata) {

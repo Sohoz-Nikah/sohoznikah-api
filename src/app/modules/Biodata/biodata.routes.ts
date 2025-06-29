@@ -58,7 +58,7 @@ router.get('/:id', BiodataControllers.getABiodata);
 
 router.get(
   '/:id/admin',
-  auth([UserRole.ADMIN, UserRole.SUPER_ADMIN]),
+  auth([UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.USER]),
   BiodataControllers.getBiodataByAdmin,
 );
 
